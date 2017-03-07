@@ -358,7 +358,7 @@ def getTableAliases(pedonFGDBloc):
             return False
 
         tableList = arcpy.ListTables("*")
-        tableList.append("site")
+        tableList.append("pedon")
 
         nameOfFields = ["TablePhysicalName","TableLabel"]
 
@@ -407,11 +407,12 @@ def createEmptyDictOfTables():
 
         arcpy.env.workspace = pedonFGDB
         tables = arcpy.ListTables()
-        tables.append(arcpy.ListFeatureClasses('site','Point')[0])  ## site is a feature class and gets excluded by the ListTables function
+        tables.append(arcpy.ListFeatureClasses('pedon','Point')[0])  ## pedon is a feature class and gets excluded by the ListTables function
 
-        # Create
+        # Create dictionary where keys will be tables and values will be later populated
         # {'area': [],'areatype': [],'basalareatreescounted': [],'beltdata': [],'belttransectsummary': []........}
         pedonGDBtablesDict = dict()
+
         for table in tables:
 
             # Skip any Metadata files
@@ -422,10 +423,9 @@ def createEmptyDictOfTables():
         return pedonGDBtablesDict
 
     except:
-        AddMsgAndPrint("Unhandled exception (GetTableAliases)", 2)
+        AddMsgAndPrint("Unhandled exception (GetTableAliases) \n", 2)
         errorMsg()
         sys.exit()
-
 ## ===============================================================================================================
 def parsePedonsIntoLists():
     """ This function will parse pedons into manageable chunks that will be sent to the 2nd URL report.
@@ -491,189 +491,313 @@ def getPedonHorizon(pedonList):
     <head><title>
 
     </title><link href="basepage.css" rel="stylesheet" type="text/css" />
-    <title></title>
+    	<title></title>
     </head>
     <body>
-    <form name="aspnetForm" method="post" action="./limsreport.aspx?report_name=WEB_AnalysisPC_MAIN_URL_EXPORT&amp;pedonid_list=858228" id="aspnetForm">
-    <input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKLTM2NDk4NDg3MA9kFgJmD2QWAgIDD2QWAgIBD2QWAgIDDw8WAh4HVmlzaWJsZWdkZGSUb7I+zHdW44zIPCkM7ZFBSiDdf2H2sAAzb9wyFx83uQ==" />
+    	<form name="aspnetForm" method="post" action="./limsreport.aspx?report_name=WEB_AnalysisPC_MAIN_URL_EXPORT&amp;pedonid_list=36186" id="aspnetForm">
+    <div>
+    <input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKLTM2NDk4NDg3MA9kFgJmD2QWAgIDD2QWAgIBD2QWAgIDDw8WAh4HVmlzaWJsZWdkZGTGpOLNcjJy57o09/vgOTuu/3Y32k0Fja4e1d5/Fegb1w==" />
+    </div>
 
-    <input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="DCF944DC" />
     <div>
 
+    	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="DCF944DC" />
+    </div>
+    	<div>
 
-    <div id="ctl00_ContentPlaceHolder1_pnlReportOutput">
+    	<div id="ctl00_ContentPlaceHolder1_pnlReportOutput">
 
-    <div id="ReportData">@begin ncsspedonlabdata
-    pedlabsampnum,peiidref,psctopdepth,psctopdepth_s,pscbotdepth,pscbotdepth_s,noncarbclaywtavg,claytotwtavg,le0to100,wf0175wtavgpsc,volfractgt2wtavg,cec7clayratiowtavg,labdatasheeturl,ncsspedbiidref,grpiidref,objwlupdated,objuseriidref,recwlupdated,recuseriidref,ncsspedonlabdataiid
+    	<div id="ReportData">@begin ncsspedonlabdata
+    pedlabsampnum|peiidref|psctopdepth|psctopdepth_s|pscbotdepth|pscbotdepth_s|noncarbclaywtavg|claytotwtavg|le0to100|wf0175wtavgpsc|volfractgt2wtavg|cec7clayratiowtavg|labdatasheeturl|ncsspedbiidref|grpiidref|objwlupdated|objuseriidref|recwlupdated|recuseriidref|ncsspedonlabdataiid
     @end
     @begin ncsslayerlabdata
-    wtpctgt2ws,wtpct0175,fragwt2075,fragwt25,fragwt275,fragwt520,basesatnh4oac,cecsumcations,basesatsumcations,ncsspedonlabdataiidref,layerseqnum,labsampnum,hzdept,hzdepb,layertype,hzname,hznameoriginal,stratextsflag,moistprepstate,texcl,sandvcmeasured,sandcomeasured,sandmedmeasured,sandfinemeasured,sandvfmeasured,sandtotmeasured,siltcomeasured,siltfinemeasured,silttotmeasured,claycarbmeasured,clayfinemeasured,claytotmeasured,carbonorganicpctmeasured,carbontotalpctmeasured,ompctest,fiberrubbedpct,fiberunrubbedpct,ph1to1h2o,ph01mcacl2,phnaf,phoxidized,resistivity,ecmeasured,esp,sar,cec7,ecec,sumbases,caco3equivmeasured,caco3lt20measured,gypsumequivlt2measured,gypsumequivmeasured,feoxalatemeasured,feextractable,fetotal,sioxalatemeasured,extracid,extral,aloxalatemeasured,altotal,pmehlich3,ph2osolublemeasured,poxalatemeasured,polsenmeasured,ptotalmeasured,nzpretention,dbthirdbar,dbovendry,aggstabpct,wtenthbarclod,wtenthbarsieve,wthirdbarclod,wthirdbarsieve,wfifteenbarmeasured,wretentiondiffws,wfifteenbartoclay,adod,lep,cole,liquidlimitmeasured,pi,recwlupdated,recuseriidref,ncsslayerlabdataiid
+    ncsspedonlabdataiidref|layerseqnum|labsampnum|hzdept|hzdepb|layertype|hzname|hznameoriginal|stratextsflag|moistprepstate|texcl|sandvcmeasured|sandcomeasured|sandmedmeasured|sandfinemeasured|sandvfmeasured|sandtotmeasured|siltcomeasured|siltfinemeasured|silttotmeasured|claycarbmeasured|clayfinemeasured|claytotmeasured|carbonorganicpctmeasured|carbontotalpctmeasured|ompctest|fiberrubbedpct|fiberunrubbedpct|fragwt25|fragwt520|fragwt2075|fragwt275|wtpct0175|wtpctgt2ws|ph1to1h2o|ph01mcacl2|phnaf|phoxidized|resistivity|ecmeasured|esp|sar|cecsumcations|cec7|ecec|sumbases|basesatsumcations|basesatnh4oac|caco3equivmeasured|caco3lt20measured|gypsumequivlt2measured|gypsumequivmeasured|feoxalatemeasured|feextractable|fetotal|sioxalatemeasured|extracid|extral|aloxalatemeasured|altotal|pmehlich3|ph2osolublemeasured|poxalatemeasured|polsenmeasured|ptotalmeasured|nzpretention|dbthirdbar|dbovendry|aggstabpct|wtenthbarclod|wtenthbarsieve|wthirdbarclod|wthirdbarsieve|wfifteenbarmeasured|wretentiondiffws|wfifteenbartoclay|adod|lep|cole|liquidlimitmeasured|pi|recwlupdated|recuseriidref|ncsslayerlabdataiid
     @end
     @begin site
-    usiteid,latdegrees,latminutes,latseconds,latdir,longdegrees,longminutes,longseconds,longdir,horizdatnm,locdesc,plsssdetails,plsssection,plsstownship,plssrange,plssmeridian,utmzone,utmnorthing,utmeasting,geocoordsource,elev,geomposhill,geomposmntn,geompostrce,geomposflats,hillslopeprof,geomslopeseg,slope,aspect,slopelenusle,slopelenuptro,shapeacross,shapedown,slopecomplex,locphysnm,siteksatclassupper,siteksatclasslower,drainagecl,runoff,drainagepattern,pmgroupname,pmgroupname_s,climstaid,climstanm,climstatype,ffd,map,reannualprecip,airtempa,soiltempa,airtemps,soiltemps,airtempw,soiltempw,benchmarksoilflag,flodfreqcl,floddurcl,flodmonthbeg,pondfreqcl,ponddurcl,pondmonthbeg,wtabledur,latstddecimaldegrees,longstddecimaldegrees,gpspositionalerror,gpspdop,elevcorrected,sdbiidref,siteiid
-    "2001WI025052","43","7","58.75","North","89","2","28.4599990844727","West","World Geodetic System 1984",,,,,,"Fourth Principal Extended","16","4777605.24","333978.92","Auto-populated from survey grade GPS","307",,,,,"Summit",,"3","135",,,"Linear","Convex","simple",,,,,,,,"1",,,,,,,,,,,,,"0",,,,,,,,"43.1329863","-89.0412387",,,,"117","873866"
+    usiteid|latdegrees|latminutes|latseconds|latdir|longdegrees|longminutes|longseconds|longdir|horizdatnm|locdesc|plsssdetails|plsssection|plsstownship|plssrange|plssmeridian|utmzone|utmnorthing|utmeasting|geocoordsource|elev|geomposhill|geomposmntn|geompostrce|geomposflats|hillslopeprof|geomslopeseg|slope|aspect|slopelenusle|slopelenuptro|shapeacross|shapedown|slopecomplex|locphysnm|siteksatclassupper|siteksatclasslower|drainagecl|runoff|drainagepattern|pmgroupname|pmgroupname_s|climstaid|climstanm|climstatype|ffd|map|reannualprecip|airtempa|soiltempa|airtemps|soiltemps|airtempw|soiltempw|benchmarksoilflag|flodfreqcl|floddurcl|flodmonthbeg|pondfreqcl|ponddurcl|pondmonthbeg|wtabledur|latstddecimaldegrees|longstddecimaldegrees|gpspositionalerror|gpspdop|elevcorrected|sdbiidref|siteiid
+    94IL111028|42|18|45.00|North|88|13|43.00|West|North American Datum of 1927|500 feet south and 2,600 feet east of the northwest corner of sec. 7, T. 44 N., R. 9 E.||||||||||229.0|Side Slope||||Backslope||27.0|270|||Linear|Linear|||||Excessively drained|Very high||||||||||||||||0||||||||42.3125106|-88.2286481||||139|36242
     @end
     @begin siteobs
-    seqnum,obsdate,obsdatekind,datacollector,photoid,swaterkind,swaterdepth,hydrologystatus,geomicrorelief,geommicelev,geommicpat,ecostateid,ecostatename,commphaseid,commphasename,plantassocnm,earthcovkind1,earthcovkind2,resourceretentionclass,bareareamaxwidth,pedodermclass,pedodermcovind,biolcrusttypedom,biolcrusttypesecond,physcrustsubtype,crustdevcl,soilredistributionclass,exposedsoilpct,localdisturbancedistance,localdisturbancedescription,drainedflag,beddingflag,plantationflag,forestrotationstage,yldstudyid,currweathcond,currairtemp,tidalperiod,bottomtype,saswatertempupper,saswatertemplower,saswaterphupper,saswaterphlower,phdetermeth,sasdissolvedoxyupper,sasdissolvedoxylower,saswatersalinityupper,saswatersalinitylower,siteiidref,siteobsiid
-    "1","4/5/2001 12:00:00 AM","Actual Site Observation Date","John Campbell",,,,,,,,,,,,,"Grass/herbaceous cover","Tame pastureland",,,,"0",,,,,,,,,"0","0","0",,,,,,,,,,,,,,,,"873866","849283"
+    seqnum|obsdate|obsdatekind|datacollector|photoid|swaterkind|swaterdepth|hydrologystatus|geomicrorelief|geommicelev|geommicpat|ecostateid|ecostatename|commphaseid|commphasename|plantassocnm|earthcovkind1|earthcovkind2|resourceretentionclass|bareareamaxwidth|pedodermclass|pedodermcovind|biolcrusttypedom|biolcrusttypesecond|physcrustsubtype|crustdevcl|soilredistributionclass|exposedsoilpct|localdisturbancedistance|localdisturbancedescription|drainedflag|beddingflag|plantationflag|forestrotationstage|yldstudyid|currweathcond|currairtemp|tidalperiod|bottomtype|saswatertempupper|saswatertemplower|saswaterphupper|saswaterphlower|phdetermeth|sasdissolvedoxyupper|sasdissolvedoxylower|saswatersalinityupper|saswatersalinitylower|siteiidref|siteobsiid
+    |10/14/1994 12:00:00 AM|Actual Site Observation Date||BXA-2-41|||||||||||||||||0|||||||||0|0|0||||||||||||||||36242|36165
     @end
     @begin siteerosionacc
-    seqnum,erokind,siteobsiidref,siteeroacciid
+    seqnum|erokind|siteobsiidref|siteeroacciid
+    |Water erosion|36165|4703
     @end
     @begin sitegeomordesc
-    seqnum,geomfiidref,geomfmod,geomfeatid,existsonfeat,siteiidref,sitegeomdiid
-    ,"39",,,,"873866","907703"
+    seqnum|geomfiidref|geomfmod|geomfeatid|existsonfeat|siteiidref|sitegeomdiid
+    |70||||36242|52245
     @end
     @begin siteobstext
-    seqnum,recdate,recauthor,siteobstextkind,textcat,textsubcat,textentry,siteobsiidref,siteobstextiid
+    seqnum|recdate|recauthor|siteobstextkind|textcat|textsubcat|textentry|siteobsiidref|siteobstextiid
     @end
     @begin siteaoverlap
-    seqnum,areaiidref,siteiidref,sareaoviid
-    ,"1748","873866","3056979"
-    ,"69629","873866","3058980"
-    ,"76952","873866","3058981"
-    ,"75037","873866","3059200"
-    ,"68910","873866","3059277"
-    ,"6796","873866","3059355"
+    seqnum|areaiidref|siteiidref|sareaoviid|areaname|areasymbol|areatypename
+    |643|36242|1050900|La Salle County, Illinois|IL099|Non-MLRA Soil Survey Area
+    |649|36242|1050901|McHenry County, Illinois|IL111|Non-MLRA Soil Survey Area
+    |68910|36242|1050899|United States|US|Country
     @end
     @begin sitemuoverlap
-    siteiidref,seqnum,lmapunitiidref,recwlupdated,recuseriidref,smuoviid
+    siteiidref|seqnum|lmapunitiidref|recwlupdated|recuseriidref|smuoviid
+    36242||2108706|9/22/2011 12:54:23 PM|1099|124012
     @end
     @begin sitepm
-    seqnum,pmorder,pmdept,pmdepb,pmmodifier,pmgenmod,pmkind,pmorigin,pmweathering,siteiidref,sitepmiid
+    seqnum|pmorder|pmdept|pmdepb|pmmodifier|pmgenmod|pmkind|pmorigin|pmweathering|siteiidref|sitepmiid
     @end
     @begin sitesoilmoist
-    seqnum,soimoistdept,soimoistdepb,soilmoistsensordepth,soilmoistsensorkind,obssoimoiststat,obssoimoist,obsgrsoimoist,soimoistten,siteobsiidref,sitesmiid
+    seqnum|soimoistdept|soimoistdepb|soilmoistsensordepth|soilmoistsensorkind|obssoimoiststat|obssoimoist|obsgrsoimoist|soimoistten|siteobsiidref|sitesmiid
     @end
     @begin sitesoiltemp
-    seqnum,soitempdep,soiltempsensorkind,soitemp,siteobsiidref,sitestiid
+    seqnum|soitempdep|soiltempsensorkind|soitemp|siteobsiidref|sitestiid
     @end
     @begin sitetext
-    seqnum,recdate,recauthor,sitetextkind,textcat,textsubcat,textentry,siteiidref,sitetextiid
+    seqnum|recdate|recauthor|sitetextkind|textcat|textsubcat|textentry|siteiidref|sitetextiid
     @end
     @begin transect
-    utransectid,tsectauth,tsectkind,tsectselmeth,tsectdelinsize,tsectdir,tsectcertstatus,tsectdbiidref,tsectiid
+    utransectid|tsectauth|tsectkind|tsectselmeth|tsectdelinsize|tsectdir|tsectcertstatus|tsectdbiidref|tsectiid
     @end
-    @begin transecttex
-    seqnum,recdate,recauthor,transecttextkind,textcat,textsubcat,textentry,tsectiidref,transecttextiid
+    @begin transecttext
+    seqnum|recdate|recauthor|transecttextkind|textcat|textsubcat|textentry|tsectiidref|transecttextiid
     @end
     @begin pediagfeatures
-    peiidref,seqnum,featdept,featdepb,featthick_l,featthick_r,featthick_h,featkind,recwlupdated,recuseriidref,pediagfeatiid
+    peiidref|seqnum|featdept|featdepb|featthick_l|featthick_r|featthick_h|featkind|recwlupdated|recuseriidref|pediagfeatiid
     @end
     @begin pefmp
-    peiidref,seqnum,fmpname,fmpvalue,fmpunits,recwlupdated,recuseriidref,pefmpiid
+    peiidref|seqnum|fmpname|fmpvalue|fmpunits|recwlupdated|recuseriidref|pefmpiid
     @end
     @begin pedon
-    siteobsiidref,upedonid,pedrecorigin,descname,taxonname,taxonname_s,localphase,taxclname,taxclname_s,taxonkind,taxonkind_s,pedontype,pedonpurpose,pedonunit,labdatadescflag,relexpsize,relexpuom,earthcovkind1,earthcovkind2,erocl,labsourceid,pedlabsampnum,tsectiidref,tsectstopnum,tsectinterval,rcapointnumber,soilreplicatenumber,azimuthfromplotcenter,distancefromplotcenter,rectangularplotlinenumber,distancefrombaseline,pedodermclass,pedodermcovind,biolcrusttypedom,biolcrusttypesecond,physcrustsubtype,crustdevcl,rangevegcanopytypedom,rangevegcanopytypesec,forestoverstoryvegtype,forestunderstoryvegtype,forestgroundcovvegtypedom,forestgroundcovvegtypesec,agronomicfeature,otherfeaturedescription,currentcropname,littercoverpct,residuedescription,pedonhydricrating,pecertstatus,peqcstatus,peqastatus,saspipelengthtot,saspipelengthext,saspipelengthunfilled,sascoresettlement,sascorelength,sascorestoragesite,sasexposurebegin,sasexposureend,pedbiidref,grpiidref,objwlupdated,objuseriidref,recwlupdated,recuseriidref,peiid
-    "849283","2001WI025052","Pedon PC 5.1","John Campbell, Ned English","Kidder","1",,,"1","Series","1","Undefined observation","Research site","2","No",,,"Grass/herbaceous cover","Tame pastureland",,,,,,,,,,,,,,"0",,,,,,,,,,,,,,,,"No","Not certified","Not reviewed","Not reviewed",,,,,,,,,"117","16238","7/18/2016 9:26:16 PM","2944","4/5/2013 3:45:27 PM","2944","858228"
+    siteobsiidref|upedonid|pedrecorigin|descname|taxonname|taxonname_s|localphase|taxclname|taxclname_s|taxonkind|taxonkind_s|pedontype|pedonpurpose|pedonunit|labdatadescflag|relexpsize|relexpuom|earthcovkind1|earthcovkind2|erocl|labsourceid|pedlabsampnum|tsectiidref|tsectstopnum|tsectinterval|rcapointnumber|soilreplicatenumber|azimuthfromplotcenter|distancefromplotcenter|rectangularplotlinenumber|distancefrombaseline|pedodermclass|pedodermcovind|biolcrusttypedom|biolcrusttypesecond|physcrustsubtype|crustdevcl|rangevegcanopytypedom|rangevegcanopytypesec|forestoverstoryvegtype|forestunderstoryvegtype|forestgroundcovvegtypedom|forestgroundcovvegtypesec|agronomicfeature|otherfeaturedescription|currentcropname|littercoverpct|residuedescription|pedonhydricrating|pecertstatus|peqcstatus|peqastatus|saspipelengthtot|saspipelengthext|saspipelengthunfilled|sascoresettlement|sascorelength|sascorestoragesite|sasexposurebegin|sasexposureend|pedbiidref|grpiidref|objwlupdated|objuseriidref|recwlupdated|recuseriidref|peiid
+    36165|94IL111028|Converted from PDP 3.x|JAD, DEC|Rodman|3||Sandy-skeletal, mixed, mesic Typic Hapludolls|1||||Full pedon description||No|||||Class 1|||||||||||||0||||||||||||||||No||||||||||||139|1298|4/6/2012 11:42:51 AM|1216|4/6/2012 11:40:56 AM|1216|36186
     @end
     @begin perestrictions
-    seqnum,soimoistdept,soimoistdepb,soilmoistsensordepth,soilmoistsensorkind,obssoimoiststat,obssoimoist,obsgrsoimoist,soimoistten,siteobsiidref,sitesmiid,
+    peiidref|seqnum|resdept|resdepb|resthk_l|resthk_r|resthk_h|reskind|reshard|recwlupdated|recuseriidref|perestrictiid
     @end
     @begin sitesurffrags
-    seqnum,sfragcov,distrocks,sfragkind,sfragsize_l,sfragsize_r,sfragsize_h,sfragshp,sfraground,sfraghard,siteobsiidref,sitesurffragsiid
+    seqnum|sfragcov|distrocks|sfragkind|sfragsize_l|sfragsize_r|sfragsize_h|sfragshp|sfraground|sfraghard|siteobsiidref|sitesurffragsiid
     @end
     @begin petaxhistfmmin
-    pedtaxhistoryiidref,seqnum,minorder,taxminalogy,recwlupdated,recuseriidref,petaxfmminiid
+    pedtaxhistoryiidref|seqnum|minorder|taxminalogy|recwlupdated|recuseriidref|petaxfmminiid
+    449102||1|mixed|||32434
     @end
     @begin petxhistfmother
-    pedtaxhistoryiidref,seqnum,taxfamother,recwlupdated,recuseriidref,petaxfoiid
+    pedtaxhistoryiidref|seqnum|taxfamother|recwlupdated|recuseriidref|petaxfoiid
     @end
     @begin petaxhistmoistcl
-    pedtaxhistoryiidref,seqnum,taxmoistcl,recwlupdated,recuseriidref,petaxmciid
+    pedtaxhistoryiidref|seqnum|taxmoistcl|recwlupdated|recuseriidref|petaxmciid
+    449102||Udic|||33763
     @end
     @begin petext
-    peiidref,seqnum,recdate,recauthor,pedontextkind,textcat,textsubcat,textentry,recwlupdated,recuseriidref,petextiid
+    peiidref|seqnum|recdate|recauthor|pedontextkind|textcat|textsubcat|textentry|recwlupdated|recuseriidref|petextiid
     @end
     @begin phcemagent
-    phiidref,seqnum,ruprescem,recwlupdated,recuseriidref,phcemagentiid
+    phiidref|seqnum|ruprescem|recwlupdated|recuseriidref|phcemagentiid
     @end
     @begin phcolor
-    phiidref,seqnum,colorpct,colorhue,colorvalue,colorchroma,colorphysst,colormoistst,recwlupdated,recuseriidref,phcoloriid
-    "4202332","1","100","7.5YR","4","6",,"Moist","4/5/2013 3:42:23 PM","2944","5395098"
-    "4202330","1","100","10YR","3","2",,"Moist","4/5/2013 3:42:23 PM","2944","5395096"
-    "4202333","1","100","7.5YR","5","6",,"Moist","4/5/2013 3:42:23 PM","2944","5395099"
-    "4202331","1","100","7.5YR","4","6",,"Moist","4/5/2013 3:42:23 PM","2944","5395097"
+    phiidref|seqnum|colorpct|colorhue|colorvalue|colorchroma|colorphysst|colormoistst|recwlupdated|recuseriidref|phcoloriid
+    166637|1||10YR|3|1||Moist|||220346
+    166637|2||10YR|4|2||Dry|||220347
+    166638|2|50|10YR|4|3||Moist|||220335
+    166638|1|50|10YR|3|3||Moist|||220348
+    166639|1||10YR|4|4||Moist|||220336
     @end
     @begin phconccolor
-    phconceniidref,seqnum,colorpct,colorhue,colorvalue,colorchroma,colormoistst,recwlupdated,recuseriidref,phconcencoloriid
+    phconceniidref|seqnum|colorpct|colorhue|colorvalue|colorchroma|colormoistst|recwlupdated|recuseriidref|phconcencoloriid
     @end
     @begin phconcs
-    phiidref,seqnum,concpct,concsize,conccntrst,conchardness,concshape,conckind,conclocation,concboundary,recwlupdated,recuseriidref,phconceniid
+    phiidref|seqnum|concpct|concsize|conccntrst|conchardness|concshape|conckind|conclocation|concboundary|recwlupdated|recuseriidref|phconceniid
     @end
     @begin phdesgnsuffix
-    phiidref,seqnum,desgnsuffix,recwlupdated,recuseriidref,phdesgnsfxiid
-    "4202332","1","t","4/5/2013 3:42:23 PM","2944","2066448"
-    "4202331","1","w","4/5/2013 3:42:23 PM","2944","2066447"
+    phiidref|seqnum|desgnsuffix|recwlupdated|recuseriidref|phdesgnsfxiid
     @end
     @begin phfeatures
-    phiidref,seqnum,horfeatkind,horfeatvtpct_l,horfeatvtpct_r,horfeatvtpct_h,horfeatlapct_l,horfeatlapct_r,horfeatlapct_h,recwlupdated,recuseriidref,phfeatsiid
+    phiidref|seqnum|horfeatkind|horfeatvtpct_l|horfeatvtpct_r|horfeatvtpct_h|horfeatlapct_l|horfeatlapct_r|horfeatlapct_h|recwlupdated|recuseriidref|phfeatsiid
     @end
     @begin phfeatcolor
-    phiidref,seqnum,horfeatkind,horfeatvtpct_l,horfeatvtpct_r,horfeatvtpct_h,horfeatlapct_l,horfeatlapct_r,horfeatlapct_h,recwlupdated,recuseriidref,phfeatsiid
+    phfeatsiidref|seqnum|colorpct|colorhue|colorvalue|colorchroma|colormoistst|recwlupdated|recuseriidref|phfeatcoloriid
     @end
     @begin phfmp
-    phiidref,seqnum,fmpname,fmpvalue,fmpunits,recwlupdated,recuseriidref,phfmpiid
+    phiidref|seqnum|fmpname|fmpvalue|fmpunits|recwlupdated|recuseriidref|phfmpiid
     @end
     @begin phfrags
-    phiidref,seqnum,fragvol,fragweight,fragsize_l,fragsize_r,fragsize_h,fragkind,fragshp,fraground,fraghard,fragestmethod,recwlupdated,recuseriidref,phfragsiid
-    "4202332",,"2",,"2","20","76",,"Nonflat",,,"Visual inspection","4/5/2013 3:42:23 PM","2944","2340983"
-    "4202333",,"11",,"2","20","76",,"Nonflat",,,"Visual inspection","4/5/2013 3:42:23 PM","2944","2340984"
+    phiidref|seqnum|fragvol|fragweight|fragsize_l|fragsize_r|fragsize_h|fragkind|fragshp|fraground|fraghard|fragestmethod|recwlupdated|recuseriidref|phfragsiid
+    166637|1|17.0||2|39|75||||||||26160
+    166638|1|25.0||2|39|75||||||||26161
+    166639|1|50.0||2|39|75||||||||26162
     @end
     @begin phmottles
-    phiidref,seqnum,mottlepct,mottlesize,mottlecntrst,colorhue,colorvalue,colorchroma,mottleshape,colormoistst,mottleloc,recwlupdated,recuseriidref,phmottlesiid
+    phiidref|seqnum|mottlepct|mottlesize|mottlecntrst|colorhue|colorvalue|colorchroma|mottleshape|colormoistst|mottleloc|recwlupdated|recuseriidref|phmottlesiid
     @end
     @begin phpores
-    phiidref,seqnum,poreqty,poreqtyclass,poresize,porecont,poreshp,recwlupdated,recuseriidref,phporesiid
+    phiidref|seqnum|poreqty|poreqtyclass|poresize|porecont|poreshp|recwlupdated|recuseriidref|phporesiid
     @end
     @begin phpvsf
-    phiidref,seqnum,pvsfpct,pvsfkind,pvsfdistinct,pvsfcont,pvsflocation,recwlupdated,recuseriidref,phpvsfiid
+    phiidref|seqnum|pvsfpct|pvsfkind|pvsfdistinct|pvsfcont|pvsflocation|recwlupdated|recuseriidref|phpvsfiid
+    166638|1|50|Organic stains|Distinct||On faces of peds|||57799
     @end
     @begin phpvsfcolor
-    phpvsfiidref,seqnum,colorpct,colorhue,colorvalue,colorchroma,colormoistst,recwlupdated,recuseriidref,phpvsfcoloriid
+    phpvsfiidref|seqnum|colorpct|colorhue|colorvalue|colorchroma|colormoistst|recwlupdated|recuseriidref|phpvsfcoloriid
+    57799|||10YR|3|2||||33932
     @end
     @begin phrdxfeatures
-    phiidref,seqnum,rdxfeatpct,rdxfeatsize,rdxfeatcntrst,rdxfeathardness,rdxfeatshape,rdxfeatkind,rdxfeatlocation,rdxfeatboundary,recwlupdated,recuseriidref,phrdxfiid
+    phiidref|seqnum|rdxfeatpct|rdxfeatsize|rdxfeatcntrst|rdxfeathardness|rdxfeatshape|rdxfeatkind|rdxfeatlocation|rdxfeatboundary|recwlupdated|recuseriidref|phrdxfiid
     @end
     @begin phroots
-    phiidref,seqnum,rootsquantity,rootsquantityclass,rootssize,rootslocation,recwlupdated,recuseriidref,phrootsiid
+    phiidref|seqnum|rootsquantity|rootsquantityclass|rootssize|rootslocation|recwlupdated|recuseriidref|phrootsiid
+    166637|1|14.0||Very fine and fine||||52228
+    166638|1|4.0||Very fine||||52241
+    166639|1|2.0||Very fine||||51616
     @end
     @begin phsample
-    phiidref,seqnum,labsampnum,fldsampid,layerdepthtop,layerdepthbottom,numberofbulksampbags,numberofbulkdensityclods,numberofnaturalfabricclods,numberofothersamples,recwlupdated,recuseriidref,phlabsampiid
+    phiidref|seqnum|labsampnum|fldsampid|layerdepthtop|layerdepthbottom|numberofbulksampbags|numberofbulkdensityclods|numberofnaturalfabricclods|numberofothersamples|recwlupdated|recuseriidref|phlabsampiid
     @end
     @begin phstructure
-    phiidref,seqnum,structgrade,structsize,structtype,structid,structpartsto,recwlupdated,recuseriidref,phstructureiid
+    phiidref|seqnum|structgrade|structsize|structtype|structid|structpartsto|recwlupdated|recuseriidref|phstructureiid
+    166637|2|Strong|Fine and medium|Granular|||||176463
+    166638|2|Weak|Fine|Granular|||||176464
+    166639|2|||Single grain|||||176465
     @end
     @begin phtext
-    phiidref,seqnum,recdate,recauthor,phorizontextkind,textcat,textsubcat,textentry,recwlupdated,recuseriidref,phtextiid
+    phiidref|seqnum|recdate|recauthor|phorizontextkind|textcat|textsubcat|textentry|recwlupdated|recuseriidref|phtextiid
     @end
     @begin phtexture
-    phiidref,seqnum,texcl,lieutex,recwlupdated,recuseriidref,phtiid
-    "4202332",,"Clay loam",,"4/5/2013 3:42:23 PM","2944","4091977"
-    "4202332",,"Loam",,"4/5/2013 3:42:23 PM","2944","4091978"
-    "4202330",,"Loam",,"4/5/2013 3:42:23 PM","2944","4091974"
-    "4202330",,"Sandy loam",,"4/5/2013 3:42:23 PM","2944","4091975"
-    "4202333",,"Sandy loam",,"4/5/2013 3:42:23 PM","2944","4091979"
-    "4202331",,"Loam",,"4/5/2013 3:42:23 PM","2944","4091976"
+    phiidref|seqnum|texcl|lieutex|recwlupdated|recuseriidref|phtiid
+    166637|1|Loam||||167685
+    166638|1|Loam||||167624
+    166639|1|Sand||||167625
+    166639|2|Loamy sand||||167763
     @end
     @begin phtexturemod
-    phtiidref,seqnum,texmod,recwlupdated,recuseriidref,phtexmodiid
+    phtiidref|seqnum|texmod|recwlupdated|recuseriidref|phtexmodiid
+    167685||Gravelly|||8304
+    167624||Gravelly|||8295
+    167625||Very gravelly|||8296
+    167763||Very gravelly|||8310
     @end
-    @begin sitesoilmoist
-    peiidref,seqnum,hzdept,hzdepb,hzthk_l,hzthk_r,hzthk_h,obsmethod,hzname,hzname_s,desgndisc,desgnmaster,desgnmasterprime,desgnvert,texture,texture_s,stratextsflag,claytotest,claycarbest,silttotest,sandtotest,fragvoltot,horcolorvflag,obssoimoiststat,rupresblkmst,rupresblkdry,rupresblkcem,rupresplate,mannerfailure,stickiness,plasticity,toughclass,penetrres,penetorient,ksatpedon,ksatstddev,ksatrepnum,horzpermclass,obsinfiltrationrate,phfield,phdetermeth,effclass,efflocation,effagent,carbdevstagefe,carbdevstagecf,mneffclass,mneffagent,reactadipyridyl,dipyridylpct,dipyridylloc,excavdifcl,soilodor,soilodorintensity,rmonosulfidep,bounddistinct,boundtopo,horzvoltotpct_l,horzvoltotpct_r,horzvoltotpct_h,horzlatareapct_l,horzlatareapct_r,horzlatareapct_h,dspcomplayerid,aashtocl,unifiedcl,recwlupdated,recuseriidref,phiid
-    "858228",,"30","66",,"36",,,"Bt","1",,"B",,,"CL L","1","0",,,,,"2","0",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"0",,,,,,,,,,,,"7/18/2016 9:24:59 PM","2944","4202332"
-    "858228",,"0","13",,"13",,,"A","1",,"A",,,"L SL","1","0",,,,,"0","0",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"0",,,,,,,,,,,,"7/18/2016 9:24:59 PM","2944","4202330"
-    "858228",,"66","67",,"1",,,"C","1",,"C",,,"SL","1","0",,,,,"11","0",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"0",,,,,,,,,,,,"7/18/2016 9:24:59 PM","2944","4202333"
-    "858228",,"13","30",,"17",,,"Bw","1",,"B",,,"L","1","0",,,,,"0","0",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"0",,,,,,,,,,,,"7/18/2016 9:24:59 PM","2944","4202331"
+    @begin phorizon
+    peiidref|seqnum|hzdept|hzdepb|hzthk_l|hzthk_r|hzthk_h|obsmethod|hzname|hzname_s|desgndisc|desgnmaster|desgnmasterprime|desgnvert|texture|texture_s|stratextsflag|claytotest|claycarbest|silttotest|sandtotest|fragvoltot|horcolorvflag|obssoimoiststat|rupresblkmst|rupresblkdry|rupresblkcem|rupresplate|mannerfailure|stickiness|plasticity|toughclass|penetrres|penetorient|ksatpedon|ksatstddev|ksatrepnum|horzpermclass|obsinfiltrationrate|phfield|phdetermeth|effclass|efflocation|effagent|carbdevstagefe|carbdevstagecf|mneffclass|mneffagent|reactadipyridyl|dipyridylpct|dipyridylloc|excavdifcl|soilodor|soilodorintensity|rmonosulfidep|bounddistinct|boundtopo|horzvoltotpct_l|horzvoltotpct_r|horzvoltotpct_h|horzlatareapct_l|horzlatareapct_r|horzlatareapct_h|dspcomplayerid|aashtocl|unifiedcl|recwlupdated|recuseriidref|phiid
+    36186|1|0|28|||||A||||||GR-L|1|0||||||0||Friable|||||||||||||||7.2|Hellige-Truog||||||||||||||0|Clear|Wavy||||||||||||166637
+    36186|2|28|36|||||Bw||||||GR-L|1|0||||||0||Friable|||||||||||||||7.8|Hellige-Truog|Strongly effervescent|||||||||||||0|Abrupt|Wavy||||||||||||166638
+    36186|3|36|152|||||C||||||GRV-S GRV-LS|1|0||||||0||Loose|||||||||||||||8.0|Hellige-Truog|Strongly effervescent|||||||||||||0||||||||||||||166639
     @end
     @begin petaxhistory
-    peiidref,seqnum,classdate,classtype,classifier,taxonname,localphase,taxonkind,seriesstatus,taxclname,taxclname_s,taxorder,taxsuborder,taxgrtgroup,taxsubgrp,taxpartsize,taxpartsizemod,taxceactcl,taxreaction,taxtempcl,taxmoistscl,taxtempregime,taxfamhahatmatcl,soiltaxedition,psctopdepth,pscbotdepth,osdtypelocflag,recwlupdated,recuseriidref,petaxhistoryiid
-    "858228","1","4/5/2001 12:00:00 AM","Sampled as","John Campbell","Kidder",,"Series","Established",,"1",,,,,,,,,,,,,,,,"0","4/5/2013 3:45:17 PM","2944","886518"
-    "858228","2","4/5/2001 12:00:00 AM","Correlated","John Campbell","Kidder",,"Series","Established",,"1",,,,,,,,,,,,,,,,"0","4/5/2013 3:45:17 PM","2944","886519"
+    peiidref|seqnum|classdate|classtype|classifier|taxonname|localphase|taxonkind|seriesstatus|taxclname|taxclname_s|taxorder|taxsuborder|taxgrtgroup|taxsubgrp|taxpartsize|taxpartsizemod|taxceactcl|taxreaction|taxtempcl|taxmoistscl|taxtempregime|taxfamhahatmatcl|soiltaxedition|psctopdepth|pscbotdepth|osdtypelocflag|recwlupdated|recuseriidref|petaxhistoryiid
+    36186||10/14/1994 12:00:00 AM|Sampled as||Rodman|||||||||||||||||||||0|8/1/2012 2:00:30 PM||273950
+    36186||4/6/2012 11:42:51 AM|Correlated||Rodman||||Sandy-skeletal, mixed, mesic Typic Hapludolls|1|Mollisols|Udolls|Hapludolls|Typic Hapludolls|sandy-skeletal||||mesic||mesic||tenth edition|||0|4/6/2012 11:40:56 AM|1216|449102
+    @end
+    @begin pepenetrationresistance
+    peiidref|seqnum|penetrometerdepth|obssoimoiststat|penetrometertiptype|penetrometerspringtype|penetorient|penetrometerreading1|penetrometerreading2|penetrometerreading3|penetrometerreading4|datacollector|recwlupdated|recuseriidref|pepenetrometeriid
+    @end
+    @begin pehydricfieldindicator
+    peiidref|seqnum|hydricsoilfieldindicator|recwlupdated|recuseriidref|pehydricfieldindiid
+    @end
+    @begin pesoilstability
+    peiidref|seqnum|soilstabilitydepth|samplecollector|datacollector|testdate|soilstabilityclass1|soilstabilityclass2|soilstabilityclass3|soilstabilityclasspredom|soilhydrophobicind1|soilhydrophobicind2|soilhydrophobicind3|recwlupdated|recuseriidref|pesoilstabilityiid
+    @end
+    @begin peinfiltrationsummary
+    peiidref|seqnum|testdate|datacollector|infiltrationmean|infiltrationstddev|infiltrationtestmethod|recwlupdated|recuseriidref|pedoninfilsumiid
+    @end
+    @begin peinfiltrationchdata
+    peinfilconstheadiidref|infiltrationrunnum|waterdrop|deltatime|infiltrationmeasured|steadystateflag|recwlupdated|recuseriidref|peinfilchdataiid
+    @end
+    @begin peinfiltrationch
+    peinfilsumiidref|testdate|repnum|infiltrationmeasured|infiltrationringconfig|ringinsertiondepth|ringradius|waterponddepth|mariottebottleradius|notes|recwlupdated|recuseriidref|peinfilconstheadiid
+    @end
+    @begin peinfiltrationfhdata
+    peinfilfallheadiidref|infiltrationrunnum|deltatime|infiltrationwatervolume|recwlupdated|recuseriidref|pedoninfilfhdataiid
+    @end
+    @begin peinfiltrationfh
+    peinfilsumiidref|testdate|repnum|infiltrationmeasured|infiltrationringconfig|ringinsertiondepth|ringradius|notes|recwlupdated|recuseriidref|peinfilfallheadiid
+    @end
+    @begin phlabresults
+    phiidref|seqnum|sampledepthtop|sampledepthbottom|sampleid|datacollector|claytotmeasured|claycarbmeasured|silttotmeasured|siltfinemeasured|siltcomeasured|sandtotmeasured|sandtotmethod|sandvcmeasured|sandcomeasured|sandmedmeasured|sandfinemeasured|sandvfmeasured|sandvfmethod|textureclfieldlab|fiberrubbedpct|fiberunrubbedpct|ph1to1h2o|ph01mcacl2|phnaf|phoxidized|phdeltah2o2|liquidlimitmeasured|plasticlimitmeasured|pi|atterbergsampcond|cole|esttotpotacidityetpa|camgmeh2|potassiummeh2|camgsatpaste|extractaciditykcl|basesatmeh2|cec7|cec82|ecec|phosphatephos|nitratenitrogen|ecmeasured|ecdeterminemeth|ec15|caco3equivmeasured|gypsumequiv|sodium|sar|gypsumreq|humiccolor|fulviccolor|humicfulviccolor|alummeasured|pyrophoshue|pyrophosvalue|pyrophoschroma|melanicindex|recwlupdated|recuseriidref|phlabresultiid
+    @end
+    @begin phhydrometeranalysis
+    phlabresultiidref|seqnum|testdate|hydrosamplewt|hydroshmpconc|hydroblankread|hydromethod|obsgrsoimoist|recwlupdated|recuseriidref|phhydromanalysisiid
+    @end
+    @begin phcoledata
+    phlabresultiidref|seqnum|repnum|phcolereading|phcolemethod|recwlupdated|recuseriidref|phcoledataiid
+    @end
+    @begin phgrcountsummary
+    phlabresultiidref|seqnum|phgrcountquartz|phgrcountmica|phgrcountglass|phgrcountglasscoated|phgrcountglassagg|phgrcountother|recwlupdated|recuseriidref|phgrcountsumiid
+    @end
+    @begin phcracks
+    phiidref|seqnum|crackfreq|crackkind|crackdepth|crackwidth|crackextabove|crackextbelow|recwlupdated|recuseriidref|phcracksiid
+    @end
+    @begin phdb
+    phiidref|seqnum|bddepthtop|bddepthbottom|bdmethod|datacollector|samplevolfieldmoist|totalsamplewtfm|totalsamplewtairdry|coarsefragwtfm|coarsefragwtairdry|coarsefragdensity|coarsefragvolmeasured|subsamplewtairdry|subsamplewtod|obsgrsoimoist|obsgrsoimoist_s|obsgravsoilmoistfe|obsgravsoilmoistfe_s|bdfieldmoistfineearth|bdfieldmoistwhole|bdovendrywhole|bdovendrywhole_s|bdovendryfineearth|bdovendryfineearth_s|bdsatiated|recwlupdated|recuseriidref|phbulkdensityiid
+    @end
+    @begin phdbcore
+    phbulkdensityiidref|sampletubelength|unfilledtubelength|unfilledtubelength_s|coresamplelength|coresamplelength_s|sampletubediameter|coresamplevolume|coresamplevolume_s|recwlupdated|recuseriidref|phbulkdencoreiid
+    @end
+    @begin phdbcorereading
+    phbulkdencoreiidref|bulkdensitytubeheadspace|recwlupdated|recuseriidref|phbdcorereadingiid
+    @end
+    @begin siteassocsoi
+    seqnum|assocsoi|siteiidref|siteassocsoiiid
+    @end
+    @begin phksatringdata
+    peksatringiidref|ksatreadingnum|waterdrop|deltatime|sathydcondmeasured|steadystateflag|recwlupdated|recuseriidref|peksatringdataiid
+    @end
+    @begin phksatring
+    phksatsumiidref|repnum|testdate|sathydcondrepmean|sathydcondrepstd|sathydcondclass|ringconfiguration|ringinsertiondepth|ringradius|waterponddepth|mariottebottleradius|texturestructurecat|notes|recwlupdated|recuseriidref|phksatringiid
+    @end
+    @begin phksatamoozedata
+    peksatamoozeiidref|ksatreadingnum|waterdrop|deltatime|outflowchamberconvfact|sathydcondmeasured|steadystateflag|recwlupdated|recuseriidref|peksatamoozedataiid
+    @end
+    @begin phksatamoozemeter
+    phksatsumiidref|repnum|testdate|sathydcondrepmean|sathydcondrepstd|sathydcondclass|boreholedepth|boreholeradius|boreholewaterlevelinit|boreholewaterlevelfinal|notes|recwlupdated|recuseriidref|phksatamoozemeteriid
+    @end
+    @begin phksatsummary
+    phiidref|seqnum|testdate|datacollector|sathydcondmean|sathydcondstd|sathydcondmethod|recwlupdated|recuseriidref|pedonksatsummaryiid
+    @end
+    @begin phhydrometerdata
+    phhydromanalysisiidref|hydroreadingnum|deltatime|hydrotemp|hydroreading|recwlupdated|recuseriidref|phhydrometerdataiid
+    @end
+    @begin phhuarts
+    phiidref|seqnum|huartvol|huartsize_l|huartsize_r|huartsize_h|huartkind|huartco|huartshp|huartrnd|huartpen|huartsafety|huartper|recwlupdated|recuseriidref|phhuartiid
+    @end
+    @begin phgrcountdata
+    phgrcountsumiidref|testdate|repnum|phgrcounttotal|phgrcountquartz|phgrcountmica|phgrcountglass|phgrcountglasscoated|phgrcountglassagg|phgrcountother|recwlupdated|recuseriidref|phgrcountiid
+    @end
+    @begin phdbcompliantcavity
+    phbulkdensityiidref|bulkdensitycavitydiameter|bulkdensitycavitylength|bulkdensitycavitywidth|bulkdensitycavityinitvol|bulkdensitycavityinitvol_s|bulkdensitycavityfinalvol|bulkdensitycavityfinalvol_s|cavityavedepthpredig|cavityavedepthpostdig|bulkdensitycavitysampvol|bulkdensitycavitysampvol_s|recwlupdated|recuseriidref|phbulkdencavityiid
+    @end
+    @begin phdbscoopreading
+    phbulkdenscoopiidref|scoopheadspace|recwlupdated|recuseriidref|phbulkdenscoopreadiid
+    @end
+    @begin phdbscoop
+    phbulkdensityiidref|scooplength|scoopwidth|scoopdepthtotal|scoopvolume|scoopvolume_s|scoopdepthunfilled|scoopdepthunfilled_s|scoopsamplevolume|scoopsamplevolume_s|recwlupdated|recuseriidref|phbulkdenscoopiid
+    @end
+    @begin sitebedrock
+    seqnum|bedrockorder|geogroup|geoform|geomember|bedrckdepth|bedrckkind|bedrckhardness|bedrckfractint|bedrckweather|bedrckstrike|bedrckdip_l|bedrckdip_h|siteiidref|sitebedrockiid
+    @end
+    @begin siteecositehistory
+    ecositecorrdate|classifier|ecositeiidref|siteiidref|siteecositehistoryiid
+    @end
+    @begin siteiristubedata
+    siteobsiidref|iristubeid|topdepthevaluated|bottomdepthevaluated|dateinstalled|dateremoved|ironpctremoved|reducedsoilflag|irisimagefilename|recwlupdated|recuseriidref|siteiristubedataiid
+    @end
+    @begin siteothvegclass
+    siteiidref|seqnum|ovegcliidref|recwlupdated|recuseriidref|siteovegcliid
+    @end
+    @begin soiltempmonitordata
+    soilmonitordataiidref|sensorid|soiltempsensordepth|soiltempsensorkind|soiltempdailymin|soiltempdailyave|soiltempdailymax|notes|recwlupdated|recuseriidref|soiltempmonitordataiid
+    @end
+    @begin soilmoistmonitordata
+    soilmonitordataiidref|sensorid|soilmoistsensordepth|soilmoistsensorkind|soilmoistvoldailymin|soilmoistvoldailyave|soilmoistvoldailymax|notes|recwlupdated|recuseriidref|soilmoistmonitordataiid
+    @end
+    @begin soilmonitordata
+    peiidref|stationid|obsdate|dailyprecipmeasured|airtempmin|airtempave|airtempmax|airtempsensorheight|notes|recwlupdated|recuseriidref|soilmonitordataiid
+    @end
+    @begin transectestcomposition
+    seqnum|compname|localphase|comppct|slope_l|slope_h|tsectiidref|tsectestcompiid
+    @end
+    @begin phredoxfcolor
+    phrdxfiidref|seqnum|colorpct|colorhue|colorvalue|colorchroma|colormoistst|recwlupdated|recuseriidref|phrdxfcoloriid
     @end
     </div>
     </div>
-
 
     </div>
     </form>
@@ -682,22 +806,22 @@ def getPedonHorizon(pedonList):
 
     try:
 
+        if numOfPedonStrings > 1:
+            tab = "\t\t"
+        else:
+            tab = "\t"
+
         """ ---------------------- Create a dictionary of number of fields per table -----------------"""
         ''' Create a dictionary that will contain table:number of fields in order
             to double check that the values from the web report are correct
             this was added b/c there were text fields that were getting disconnected in the report
             and being read as 2 lines -- Jason couldn't address this issue in NASIS '''
 
-        if numOfPedonStrings > 1:
-            tab = "\t\t"
-        else:
-            tab = "\t"
-
         arcpy.env.workspace = pedonFGDB
 
         tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
         validTables = arcpy.ListTables("*")
-        validTables.append('site')
+        validTables.append('pedon')
 
         for table in validTables:
 
@@ -814,8 +938,7 @@ def getPedonHorizon(pedonList):
                     # appending this value exceeded the number of possible fields
                     else:
                         AddMsgAndPrint("\t\tIncorrectly formatted Record Found in " + currentTable + " table:",2)
-                        AddMsgAndPrint("\t\t\tNumber of fields in table: " + str(numOfFields),2)
-                        AddMsgAndPrint("\t\t\tNumber of fields from report: " + str(len(partialValue.split('|'))),2)
+                        AddMsgAndPrint("\t\t\tRecord should have " + str(numOfFields) + " values but has " + str(len(partialValue.split('|'))),2)
                         AddMsgAndPrint("\t\t\tOriginal Record: " + originalValue,2)
                         AddMsgAndPrint("\t\t\tAppended Record: " + partialValue,2)
                         invalidRecord += 1
@@ -828,9 +951,8 @@ def getPedonHorizon(pedonList):
                     # number of values exceed the number of fields; Big Error
                     if numOfValues > numOfFields:
                         AddMsgAndPrint("\n\t\tIncorrectly formatted Record Found in " + currentTable + " table:",2)
-                        AddMsgAndPrint("\t\t\tNumber of fields in table: " + str(numOfFields),2)
-                        AddMsgAndPrint("\t\t\tNumber of fields in report: " + str(numOfValues),2)
-                        AddMsgAndPrint("\t\t\tRecord Values: " + str(theValue),2)
+                        AddMsgAndPrint("\t\t\tRecord should have " + str(numOfFields) + " values but has " + str(numOfValues),2)
+                        AddMsgAndPrint("\t\t\tRecord: " + theValue,2)
                         invalidRecord += 1
 
                     # number of values falls short of the number of correct fields
@@ -871,10 +993,6 @@ def getPedonHorizon(pedonList):
             AddMsgAndPrint("\t\tThere were " + splitThousands(invalidRecord) + " invalid record(s) not captured",1)
 
         return True
-
-    except MemoryError:
-        AddMsgAndPrint("\n\nOut of Memory Genius! --- " + str(sys.getsizeof(pedonGDBtables)),2)
-        sys.exit()
 
     except URLError, e:
         if hasattr(e, 'reason'):
@@ -1211,7 +1329,6 @@ if __name__ == '__main__':
         totalPedons = len(pedonList)
         AddMsgAndPrint("\nThere are " + splitThousands(totalPedons) + " pedon IDs in your text file")
 
-
         """ ------------------------------------------------------Create New File Geodatabaes and get Table Aliases for printing -------------------------------------------------------------------
             Create a new FGDB using a pre-established XML workspace schema.  All tables will be empty
             and relationships established.  A dictionary of empty lists will be created as a placeholder
@@ -1238,6 +1355,31 @@ if __name__ == '__main__':
             the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report.  Much faster than opening and closing cursors."""
 
         pedonGDBtables = createEmptyDictOfTables()
+
+        """ --------------------------------------------------- Create a dictionary of number of fields per table -----------------------------------------------------------------------
+            Create a dictionary that will contain table:number of fields in order
+            to double check that the values from the web report are correct
+            this was added b/c there were text fields that were getting disconnected in the report
+            and being read as 2 lines -- Jason couldn't address this issue in NASIS """
+
+        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
+        validTables = arcpy.ListTables("*")
+        validTables.append('pedon')
+
+        for table in validTables:
+
+            # Skip any Metadata files
+            if table.find('Metadata') > -1: continue
+
+            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+            numOfValidFlds = 0
+
+            for field in numOfFields:
+                if not field.type.lower() in ("oid","geometry"):
+                    numOfValidFlds +=1
+
+            tableFldDict[table] = numOfValidFlds
+            del numOfFields;numOfValidFlds
 
         """ ------------------------------------------ Get Site, Pedon, and Pedon Horizon information from NASIS -------------------------------------------------------------------------
         ----------------------------------------------- Uses the 'WEB_AnalysisPC_MAIN_URL_EXPORT' NASIS report ---------------------------------------------------------------------------
@@ -1279,7 +1421,7 @@ if __name__ == '__main__':
                 sys.exit()
 
             """ Strictly for formatting print message"""
-            if numOfPedonStrings > 1:
+            if numOfPedonStrings > 2:
                 AddMsgAndPrint("\tRequest " + splitThousands(i) + " of " + splitThousands(numOfPedonStrings) + " for " + str(len(pedonString.split(','))) + " pedons",0)
                 arcpy.SetProgressorLabel("Request " + splitThousands(i) + " of " + splitThousands(numOfPedonStrings) + " for " + str(len(pedonString.split(','))) + " pedons")
             else:
@@ -1302,7 +1444,7 @@ if __name__ == '__main__':
                     AddMsgAndPrint("\n\tUnloading pedon data into FGDB to avoid memory issues. Current size: " + str(getObjectSize(pedonGDBtables, verbose=False)) + " -- Number of Pedons: " + splitThousands(j) ,1)
 
                 # Import Pedon Information into Pedon FGDB
-                if len(pedonGDBtables['site']):
+                if len(pedonGDBtables['pedon']):
                     if not importPedonData(tblAliases,verbose=(True if i==numOfPedonStrings else False)):
                         sys.exit()
 
@@ -1315,21 +1457,21 @@ if __name__ == '__main__':
             i+=1
 
         """ ------------------------------------ Report Summary of results -----------------------------------"""
-        sitePedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'site').getOutput(0))
-        if totalPedons == sitePedonCount:
+        pedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'pedon').getOutput(0))
+        if totalPedons == pedonCount:
             AddMsgAndPrint("\n\nSuccessfully downloaded " + splitThousands(totalPedons) + " pedons from NASIS",0)
         else:
-            AddMsgAndPrint("\n\nDownloaded " + splitThousands(sitePedonCount) + " from NASIS",2)
-            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - sitePedonCount) + " pedons from NASIS",2)
+            AddMsgAndPrint("\n\nDownloaded " + splitThousands(pedonCount) + " from NASIS",2)
+            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - pedonCount) + " pedons from NASIS",2)
 
-        """ ---------------------------Add Site Feature Class to ArcMap Session if available ------------------"""
+        """ ---------------------------Add Pedon Feature Class to ArcMap Session if available ------------------"""
         try:
             mxd = arcpy.mapping.MapDocument("CURRENT")
             df = arcpy.mapping.ListDataFrames(mxd)[0]
-            lyr = os.path.join(pedonFGDB,'site')
+            lyr = os.path.join(pedonFGDB,'pedon')
             newLayer = arcpy.mapping.Layer(lyr)
             arcpy.mapping.AddLayer(df, newLayer, "TOP")
-            AddMsgAndPrint("\nAdded the site feature class to your ArcMap Session",0)
+            AddMsgAndPrint("\nAdded the pedon feature class to your ArcMap Session",0)
         except:
             pass
 

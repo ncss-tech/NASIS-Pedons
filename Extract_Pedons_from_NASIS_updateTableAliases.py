@@ -97,7 +97,7 @@ from arcpy import env
 
 if __name__ == '__main__':
 
-    nasisPedons = os.path.dirname(sys.argv[0]) + os.sep + "Nasis_Pedons.gdb"
+    nasisPedons = os.path.dirname(sys.argv[0]) + os.sep + "NasisPedonsTemplate.gdb"
     aliasTable = nasisPedons + os.sep + "MetadataTable"
     aliasFieldTbl = nasisPedons + os.sep + "MetadataTableColumn"
     relateTable = nasisPedons + os.sep + "MetadataRelationshipDetail"
@@ -115,8 +115,8 @@ if __name__ == '__main__':
     nasisPedonsTables = arcpy.ListTables()
 
     # manually add the site table b/c ListTables does not recognize it.
-    if arcpy.Exists(nasisPedons + os.sep + "site"):
-        nasisPedonsTables.append("site")
+    if arcpy.Exists(nasisPedons + os.sep + "pedon"):
+        nasisPedonsTables.append("pedon")
 
     textFilePath = os.path.dirname(sys.argv[0]) + os.sep + "NASIS_Pedons_Table_Field_Aliases.txt"
 
@@ -167,9 +167,12 @@ if __name__ == '__main__':
             if field.name == "OBJECTID" or field.name == "SHAPE":continue
 
             if fldAliasDict.has_key(field.name):
-                alias = fldAliasDict.get(field.name)
-                arcpy.AlterField_management(table,field.name,"#",alias)
-                AddMsgAndPrint("\t\t" + str(i) + ". " + field.name + " - " + alias)
+                try:
+                    alias = fldAliasDict.get(field.name)
+                    arcpy.AlterField_management(table,field.name,"#",alias)
+                    AddMsgAndPrint("\t\t" + str(i) + ". " + field.name + " - " + alias)
+                except:
+                    pass
                 #AddMsgAndPrint(table + "," + tblAliasDict.get(table) + "," + field.name + "," + alias + "," + str(i))    # Use this line to create a comma seperated file
                 i += 1
 

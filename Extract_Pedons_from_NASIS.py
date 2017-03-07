@@ -607,6 +607,8 @@ def getWebExportPedon(coordinates):
 
 ## ================================================================================================================
 def filterPedonsByFeature(feature):
+    """ This function will temporarily plot out the pedons in order to determine which pedons fall completely
+        within the user's AOI.  Once determined, the extra pedons will be removed from the pedonDict"""
 
     try:
         AddMsgAndPrint("\nSelecting pedons that intersect with " + arcpy.Describe(feature).Name + " Layer",0)
@@ -679,7 +681,7 @@ def filterPedonsByFeature(feature):
             AddMsgAndPrint("\t\tLAB Pedons: " + splitThousands(labPedonCnt))
             AddMsgAndPrint("\t\tNASIS Pedons: " + splitThousands(pedonsWithinAOI - labPedonCnt))
 
-            for layer in (aoiFeature,tempPoints,tempPointsPRJ):#,selectedPedons):
+            for layer in (aoiFeature,tempPoints,tempPointsPRJ,selectedPedons):
                 if arcpy.Exists(layer):
                     arcpy.Delete_management(layer)
 
@@ -782,6 +784,7 @@ def createEmptyDictOfTables():
         # Create dictionary where keys will be tables and values will be later populated
         # {'area': [],'areatype': [],'basalareatreescounted': [],'beltdata': [],'belttransectsummary': []........}
         pedonGDBtablesDict = dict()
+
         for table in tables:
 
             # Skip any Metadata files
@@ -792,7 +795,7 @@ def createEmptyDictOfTables():
         return pedonGDBtablesDict
 
     except:
-        AddMsgAndPrint("Unhandled exception (GetTableAliases)", 2)
+        AddMsgAndPrint("Unhandled exception (GetTableAliases) \n", 2)
         errorMsg()
         sys.exit()
 
@@ -1575,7 +1578,7 @@ def importPedonData(tblAliases,verbose=False):
                     if table == 'pedon':
 
                         peiidValue = newRow[peiidIndex]
-                        if not pedonDict[peiidValue] == None:
+                        if not pedonDict[peiidValue][1] == None:
                             newRow.append("Yes")
                         else:
                             newRow.append("No")
@@ -1814,6 +1817,7 @@ if __name__ == '__main__':
             for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
         pedonFGDB = createPedonFGDB()
+        arcpy.env.workspace = pedonFGDB
 
         if pedonFGDB == "":
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
@@ -1834,6 +1838,31 @@ if __name__ == '__main__':
             the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report.  Much faster than opening and closing cursors."""
 
         pedonGDBtables = createEmptyDictOfTables()
+
+        """ --------------------------------------------------- Create a dictionary of number of fields per table -----------------------------------------------------------------------
+            Create a dictionary that will contain table:number of fields in order
+            to double check that the values from the web report are correct
+            this was added b/c there were text fields that were getting disconnected in the report
+            and being read as 2 lines -- Jason couldn't address this issue in NASIS """
+
+        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
+        validTables = arcpy.ListTables("*")
+        validTables.append('pedon')
+
+        for table in validTables:
+
+            # Skip any Metadata files
+            if table.find('Metadata') > -1: continue
+
+            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+            numOfValidFlds = 0
+
+            for field in numOfFields:
+                if not field.type.lower() in ("oid","geometry"):
+                    numOfValidFlds +=1
+
+            tableFldDict[table] = numOfValidFlds
+            del numOfFields;numOfValidFlds
 
         """ ------------------------------------------ Get Site, Pedon, and Pedon Horizon information from NASIS -------------------------------------------------------------------------
         ----------------------------------------------- Uses the 'WEB_AnalysisPC_MAIN_URL_EXPORT' NASIS report ---------------------------------------------------------------------------
@@ -1863,7 +1892,7 @@ if __name__ == '__main__':
             k+=numOfPedonsInPedonString
 
             """ Exit if There have been multiple failed attempts at requesting pedon data"""
-            if len(badStrings) > 1:
+            if len(badStrings) > 2:
                 AddMsgAndPrint("\n\tMultiple failed attempts with the following pedon IDs:",2)
 
                 n = 1
@@ -1912,21 +1941,21 @@ if __name__ == '__main__':
             i+=1
 
         """ ------------------------------------ Report Summary of results -----------------------------------"""
-        sitePedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'site').getOutput(0))
-        if totalPedons == sitePedonCount:
+        pedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'pedon').getOutput(0))
+        if totalPedons == pedonCount:
             AddMsgAndPrint("\n\nSuccessfully downloaded " + splitThousands(totalPedons) + " pedons from NASIS",0)
         else:
-            AddMsgAndPrint("\n\nDownloaded " + splitThousands(sitePedonCount) + " from NASIS",2)
-            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - sitePedonCount) + " pedons from NASIS",2)
+            AddMsgAndPrint("\n\nDownloaded " + splitThousands(pedonCount) + " from NASIS",2)
+            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - pedonCount) + " pedons from NASIS",2)
 
-        """ ---------------------------Add Site Feature Class to ArcMap Session if available ------------------"""
+        """ ---------------------------Add Pedon Feature Class to ArcMap Session if available ------------------"""
         try:
             mxd = arcpy.mapping.MapDocument("CURRENT")
             df = arcpy.mapping.ListDataFrames(mxd)[0]
-            lyr = os.path.join(pedonFGDB,'site')
+            lyr = os.path.join(pedonFGDB,'pedon')
             newLayer = arcpy.mapping.Layer(lyr)
             arcpy.mapping.AddLayer(df, newLayer, "TOP")
-            AddMsgAndPrint("\nAdded the site feature class to your ArcMap Session",0)
+            AddMsgAndPrint("\nAdded the pedon feature class to your ArcMap Session",0)
         except:
             pass
 
