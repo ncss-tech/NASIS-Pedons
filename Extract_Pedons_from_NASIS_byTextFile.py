@@ -1306,13 +1306,13 @@ if __name__ == '__main__':
 
     try:
 
-##        inputTextFile = arcpy.GetParameterAsText(0)
-##        GDBname = arcpy.GetParameter(1)
-##        outputFolder = arcpy.GetParameterAsText(2)
+        inputTextFile = arcpy.GetParameterAsText(0)
+        GDBname = arcpy.GetParameter(1)
+        outputFolder = arcpy.GetParameterAsText(2)
 
-        inputTextFile = r'P:\SSR10_Geodata\MLRAGeodata\pedons\PEDON_PEIID_LIST.txt'
-        GDBname = 'Dylan'
-        outputFolder = r'P:\SSR10_Geodata\MLRAGeodata\pedons'
+##        inputTextFile = r'P:\SSR10_Geodata\MLRAGeodata\pedons\PEDON_PEIID_LIST.txt'
+##        GDBname = 'Dylan'
+##        outputFolder = r'P:\SSR10_Geodata\MLRAGeodata\pedons'
 
         """ ------------------------------------------------------------------------ Set Scratch Workspace -------------------------------------------------------------------------------------"""
         scratchWS = setScratchWorkspace()
