@@ -723,12 +723,12 @@ def createPedonFGDB():
         # Return false if xml file is not found
         if not arcpy.Exists(pedonXML):
             AddMsgAndPrint("\t" + os.path.basename(pedonXML) + " Workspace document was not found!",2)
-            return ""
+            return False
 
         # Return false if pedon fGDB template is not found
         if not arcpy.Exists(localPedonGDB):
             AddMsgAndPrint("\t" + os.path.basename(localPedonGDB) + " FGDB template was not found!",2)
-            return ""
+            return False
 
         newPedonFGDB = os.path.join(outputFolder,GDBname + ".gdb")
 
@@ -738,7 +738,7 @@ def createPedonFGDB():
                 AddMsgAndPrint("\t" + GDBname + ".gdb already exists. Deleting and re-creating FGDB\n",1)
             except:
                 AddMsgAndPrint("\t" + GDBname + ".gdb already exists. Failed to delete\n",2)
-                return ""
+                return False
 
         # copy template over to new location
         AddMsgAndPrint("\tCreating " + GDBname + ".gdb with NCSS Pedon Schema 7.3")
@@ -752,21 +752,19 @@ def createPedonFGDB():
 ##        arcpy.ImportXMLWorkspaceDocument_management(newPedonFGDB, pedonXML, "DATA", "DEFAULTS")
 
         arcpy.UncompressFileGeodatabaseData_management(newPedonFGDB)
-
         arcpy.RefreshCatalog(outputFolder)
-
         AddMsgAndPrint("\tSuccessfully created: " + GDBname + ".gdb")
 
         return newPedonFGDB
 
     except arcpy.ExecuteError:
         AddMsgAndPrint(arcpy.GetMessages(2),2)
-        return ""
+        return False
 
     except:
         AddMsgAndPrint("Unhandled exception (createFGDB)", 2)
         errorMsg()
-        return ""
+        return False
 
 ## ===============================================================================================================
 def createEmptyDictOfTables():
@@ -1545,7 +1543,11 @@ def importPedonData(tblAliases,verbose=False):
                 cursor = arcpy.da.InsertCursor(GDBtable,nameOfFields)
                 recNum = 0
 
-                """ -------------------------------- Insert Rows -------------------------------------"""
+                """ -------------------------------- Insert Rows ------------------------------------------
+                    Iterate through every value from a specific table in the pedonGDBtables dictary
+                    and add it to the appropriate FGDB table  Truncate the value if it exceeds the
+                    max number of characters.  Set the value to 'None' if it is an empty string."""
+
                 # '"S1962WI025001","43","15","9","North","89","7","56","West",,"Dane County, Wisconsin. 100 yards south of road."'
                 for rec in pedonGDBtables[table]:
 
@@ -1819,7 +1821,7 @@ if __name__ == '__main__':
         pedonFGDB = createPedonFGDB()
         arcpy.env.workspace = pedonFGDB
 
-        if pedonFGDB == "":
+        if not pedonFGDB:
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
             sys.exit()
 
