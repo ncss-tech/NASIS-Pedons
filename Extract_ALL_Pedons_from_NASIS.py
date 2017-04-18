@@ -956,11 +956,34 @@ def getPedonHorizon(pedonList):
                 try:
                     AddMsgAndPrint(tab + "3rd attempt at requesting data")
                     theReport = urlopen(URL).readlines()
-                except:
-                    errorMsg()
+
+                except URLError, e:
+                    if hasattr(e, 'reason'):
+                        AddMsgAndPrint("\n\t" + URL)
+                        AddMsgAndPrint("\tURL Error: " + str(e.reason), 2)
+
+                    elif hasattr(e, 'code'):
+                        AddMsgAndPrint("\n\t" + URL)
+                        AddMsgAndPrint("\t" + e.msg + " (errorcode " + str(e.code) + ")", 2)
+
                     return False
 
-        #AddMsgAndPrint(tab + "Network Request Time: " + toc(requestStartTime))
+                except socket.timeout, e:
+                    AddMsgAndPrint("\n\t" + URL)
+                    AddMsgAndPrint("\tServer Timeout Error", 2)
+                    return False
+
+                except socket.error, e:
+                    AddMsgAndPrint("\n\t" + URL)
+                    AddMsgAndPrint("\tNASIS Reports Website connection failure", 2)
+                    return False
+
+                except httplib.BadStatusLine:
+                    AddMsgAndPrint("\n\t" + URL)
+                    AddMsgAndPrint("\tNASIS Reports Website connection failure", 2)
+                    return False
+
+        AddMsgAndPrint(tab + "Network Request Time: " + toc(requestStartTime))
 
         invalidTable = 0    # represents tables that don't correspond with the GDB
         invalidRecord = 0  # represents records that were not added
@@ -1146,7 +1169,7 @@ def importPedonData(tblAliases,verbose=False):
         arcpy.SetProgressor("step","Importing Pedon Data into FGDB",0,len(tblKeys),1)
         for table in tblKeys:
 
-            arcpy.SetProgressorLabel("Importing Pedon Data into FGDB: " + table)
+            arcpy.SetProgressorLabel("Importing Pedon Data into FGDB table: " + table)
             arcpy.SetProgressorPosition()
 
             # Skip any Metadata files
@@ -1430,8 +1453,8 @@ if __name__ == '__main__':
         outputFolder = arcpy.GetParameterAsText(1)
         question = arcpy.GetParameterAsText(2)
 
-        #GDBname = 'Dylan'
-        #outputFolder = r'M:\Temp'
+##        GDBname = 'Dylan_20170417'
+##        outputFolder = r'M:\Temp'
 
         if question != "dylanbeaudette":
             AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
@@ -1449,7 +1472,8 @@ if __name__ == '__main__':
             ---------------------------------------------------- Uses the 'WEB_EXPORT_PEDON_BOX_COUNT' NASIS report --------------------------------------------------------------------------"""
         # ['10851', '10852', '10853', '10854']
         pedonidList = getListOfWebPedonIDs()
-        #pedonidList = [(line.rstrip('\n')).split(',') for line in open(inputTextFile)].pop()
+        ##pedonidList = pedonidList[0:10000]
+        ##pedonidList = [(line.rstrip('\n')).split(',') for line in open(inputTextFile)].pop()
         totalPedons = len(pedonidList)
         AddMsgAndPrint("\n" + splitThousands(totalPedons) + " pedons will be downloaded from NASIS")
 

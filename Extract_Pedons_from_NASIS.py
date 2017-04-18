@@ -1478,7 +1478,7 @@ def importPedonData(tblAliases,verbose=False):
         tblKeys.sort()
 
         """ ---------------------------------------------------"""
-        arcpy.SetProgressor("step","Importing Pedon Data into FGDB",0,len(tblKeys),1)
+        arcpy.SetProgressor("step","Importing Pedon Data into FGDB table: ",0,len(tblKeys),1)
         for table in tblKeys:
 
             arcpy.SetProgressorLabel("Importing Pedon Data into FGDB: " + table)
