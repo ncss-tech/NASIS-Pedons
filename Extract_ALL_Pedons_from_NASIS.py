@@ -10,7 +10,7 @@
 # phone: 608.662.4422 ext. 190
 #
 # Created:     7/04/2016
-# Last Modified: 4/17/2017
+# Last Modified: 5/18/2017
 
 #-------------------------------------------------------------------------------
 
@@ -273,9 +273,9 @@ def splitThousands(someNumber):
         return someNumber
 
 ## ================================================================================================================
-def getListOfWebPedonIDs():
-    """ This function will send the bounding coordinates to the 'Web Pedon PEIID List All of NASIS' NASIS
-        report and return a list of pedons within the bounding coordinates.  Pedons include regular
+def getListOfAllPedonIDs():
+    """ This function will send a request using the 'Web Pedon PEIID List All of NASIS' NASIS
+        report and return a list of ALL pedons in NASIS.  Pedons include regular
         NASIS pedons and LAB pedons.  Each record in the report will contain the following values:
 
         START 1204126, 1204127, 1204128 STOP"""
@@ -345,12 +345,11 @@ def getListOfWebPedonIDs():
                 if theValue == "STOP":  # written as part of the report; end of lines
                     break
 
-                # Found a valid project record i.e. -- SDJR - MLRA 103 - Kingston silty clay loam, 1 to 3 percent slopes|400036
+                # Found a valid record
                 if not theValue == None:
                     listOfPedonIDs = theValue.split(",")
                 else:
                     continue
-
 
             else:
                 if theValue.startswith('<div id="ReportData">START'):
@@ -390,11 +389,6 @@ def createPedonFGDB():
         pedonXML = os.path.dirname(sys.argv[0]) + os.sep + "Extract_Pedons_from_NASIS_XMLWorkspace.xml"
         localPedonGDB = os.path.dirname(sys.argv[0]) + os.sep + "NasisPedonsTemplate.gdb"
 
-        # Return false if xml file is not found
-        if not arcpy.Exists(pedonXML):
-            AddMsgAndPrint("\t" + os.path.basename(pedonXML) + " Workspace document was not found!",2)
-            return False
-
         # Return false if pedon fGDB template is not found
         if not arcpy.Exists(localPedonGDB):
             AddMsgAndPrint("\t" + os.path.basename(localPedonGDB) + " FGDB template was not found!",2)
@@ -414,6 +408,12 @@ def createPedonFGDB():
         AddMsgAndPrint("\tCreating " + GDBname + ".gdb with NCSS Pedon Schema 7.3")
         arcpy.Copy_management(localPedonGDB,newPedonFGDB)
 
+        """ ------------------------------ Code to use XML Workspace -------------------------------------------"""
+##        # Return false if xml file is not found
+##        if not arcpy.Exists(pedonXML):
+##            AddMsgAndPrint("\t" + os.path.basename(pedonXML) + " Workspace document was not found!",2)
+##            return False
+##
 ##        # Create empty temp File Geodatabae
 ##        arcpy.CreateFileGDB_management(outputFolder,os.path.splitext(os.path.basename(newPedonFGDB))[0])
 ##
@@ -521,9 +521,9 @@ def createEmptyDictOfTables():
         return pedonGDBtablesDict
 
     except:
-        AddMsgAndPrint("Unhandled exception (GetTableAliases) \n", 2)
+        AddMsgAndPrint("\nUnhandled exception (GetTableAliases)\n", 2)
         errorMsg()
-        sys.exit()
+        exit()
 ## ===============================================================================================================
 def parsePedonsIntoLists():
     """ This function will parse pedons into manageable chunks that will be sent to the 2nd URL report.
@@ -577,7 +577,7 @@ def parsePedonsIntoLists():
     except:
         AddMsgAndPrint("Unhandled exception (createFGDB)", 2)
         errorMsg()
-        sys.exit()
+        exit()
 
 ## ================================================================================================================
 def getPedonHorizon(pedonList):
@@ -926,15 +926,19 @@ def getPedonHorizon(pedonList):
             # Skip any Metadata files
             if table.find('Metadata') > -1: continue
 
-            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+            nameOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
             numOfValidFlds = 0
 
-            for field in numOfFields:
+            for field in nameOfFields:
                 if not field.type.lower() in ("oid","geometry"):
                     numOfValidFlds +=1
 
+            # Add 2 more fields to the pedon table for X,Y
+            if table == 'pedon':
+                numOfValidFlds += 2
+
             tableFldDict[table] = numOfValidFlds
-            del numOfFields;numOfValidFlds
+            del nameOfFields;numOfValidFlds
 
         """----------------------------------- Open a network object --------------------------------"""
         ''' Open a network object using the URL with the search string already concatenated.
@@ -1096,7 +1100,6 @@ def getPedonHorizon(pedonList):
 
             arcpy.SetProgressorPosition()
 
-        #Resets the progressor back to its initial state
         arcpy.ResetProgressor()
 
         #AddMsgAndPrint(tab + "Storing Data into Memory: " + toc(memoryStartTime))
@@ -1142,6 +1145,12 @@ def getPedonHorizon(pedonList):
 
 ## ================================================================================================================
 def importPedonData(tblAliases,verbose=False):
+    """ This function will purge the contents from the pedonGDBtables dictionary which contains all of the pedon
+        data into the pedon FGDB.  Depending on the number of pedons in the user's AOI, this function will be
+        used multiple times.  The pedonGDBtables dictionary could possilbly allocate all of the computer's
+        memory so a fail-save was built in to make sure a memory exception error wasn't encountered.  This
+        function is invoked when approximately 40,000 pedons have been retrieved from the server and stored in \
+        memory."""
 
     try:
 
@@ -1191,17 +1200,17 @@ def importPedonData(tblAliases,verbose=False):
                 """ -------------------------------- Collect field information -----------------------"""
                 ''' For the current table, get the field length if the field is a string.  I do this b/c
                 the actual value may exceed the field length and error out as has happened in SSURGO.  If
-                the value does exceed the field length then the value will be truncated to the max length
+##                the value does exceed the field length then the value will be truncated to the max length
                 of the field '''
 
                 # Put all the field names in a list
                 fieldList = arcpy.Describe(GDBtable).fields
                 nameOfFields = []
-                fldLengths = list()
+                fldLengths = []
 
                 for field in fieldList:
 
-                    # Skip Object ID field Shape field (only for site)
+                    # Skip Object ID field Shape field (only for pedon)
                     if not field.type.lower() in ("oid","geometry"):
                         nameOfFields.append(field.name)
 
@@ -1210,19 +1219,30 @@ def importPedonData(tblAliases,verbose=False):
                         else:
                             fldLengths.append(0)
 
-                # Pedon feature class will have X,Y geometry added; Add XY token to list
+                # Add a new field at the end called 'labsampleIndicator' to indicate whether
+                # record is a LAB pedon. Addd XY token to list
                 if table == 'pedon':
+
+##                    labField = 'labsampleIndicator'
+##                    arcpy.AddField_management(GDBtable,'labsampleIndicator','TEXT','#','#',3,'Lab Sample Indicator','#','#','#')
+##                    nameOfFields.append(labField)
+
+                    # Pedon feature class will have X,Y geometry added; Add XY token to list
                     nameOfFields.append('SHAPE@XY')
+                    fldLengths.append(0)  # X coord
+                    fldLengths.append(0)  # Y coord
 
-
-                # Initiate the insert cursor object using all of the fields
-                cursor = arcpy.da.InsertCursor(GDBtable,nameOfFields)
-                recNum = 0
+##                    peiidFld = [f.name for f in arcpy.ListFields(table,'peiid')][0]
+##                    peiidIndex = nameOfFields.index(peiidFld)
 
                 """ -------------------------------- Insert Rows ------------------------------------------
                     Iterate through every value from a specific table in the pedonGDBtables dictary
                     and add it to the appropriate FGDB table  Truncate the value if it exceeds the
                     max number of characters.  Set the value to 'None' if it is an empty string."""
+
+                # Initiate the insert cursor object using all of the fields
+                cursor = arcpy.da.InsertCursor(GDBtable,nameOfFields)
+                recNum = 0
 
                 # '"S1962WI025001","43","15","9","North","89","7","56","West",,"Dane County, Wisconsin. 100 yards south of road."'
                 for rec in pedonGDBtables[table]:
@@ -1247,39 +1267,55 @@ def importPedonData(tblAliases,verbose=False):
                         newRow.append(value)
                         fldNo += 1
 
-                    """ -----------------------------------Pedon Feature Class-------------------------
-                        The X,Y coordinates need to come from the site table.
-                        pedon ---> siteobs ---> site
-                        1) Link to the siteobs table using the siteobsiidref field
-                        2) Get the siteiid from the siteobs table
-                        3) Retrieve the X,Y coords from site table"""
-
+                    # Add XY coordinates to the pedon point feature class.
                     if table == 'pedon':
+                        try:
+                            xValue = float(newRow[-1])  # Long
+                            yValue = float(newRow[-2])  # Lat
+                        except:
+                            xValue = 0.00
+                            yValue = 90.0
 
-                        # Primary key from 'Siteobs' table that links to Pedon Table
-                        siteobsiid = rec.split('|')[0] # <-- represents siteobsiidref key
-                        siteiid = ""
-
-                        # iterate through the siteobs values looking for a siteobsiid match
-                        # ['|6/24/1991 12:00:00 AM|Actual Site Observation Date||2|||||||||||||||||0|||||||||0|0|0||||||||||||||||10873|10818']
-                        for v in pedonGDBtables.get('siteobs'):
-                            if v.split('|')[-1] == siteobsiid:
-                                siteiid = v.split('|')[-2]
-
-                        if siteiid:
-                            for v in pedonGDBtables.get('site'):
-                                if v.split('|')[-1] == siteiid:
-                                    try:
-                                        xValue = float(v.split('|')[-6])
-                                        yValue = float(v.split('|')[-7])
-                                    except:
-                                        xValue = 0.00
-                                        yValue = 90.0
-
-                        else:
-                            AddMsgAndPrint("\tsiteiid value not found for siteobs value: " + str(siteobsiid),2)
+                        # remove the X,Y coords from the newRow list b/c X,Y
+                        # fields don't exist in the pedon Table
+                        newRow = newRow[:-2]
 
                         newRow.append((xValue,yValue))
+                        del xValue,yValue
+
+##                    """ -----------------------------------Pedon Feature Class-------------------------
+##                        The X,Y coordinates need to come from the site table.
+##                        pedon ---> siteobs ---> site
+##                        1) Link to the siteobs table using the siteobsiidref field
+##                        2) Get the siteiid from the siteobs table
+##                        3) Retrieve the X,Y coords from site table"""
+##
+##                    if table == 'pedon':
+##
+##                        # Primary key from 'Siteobs' table that links to Pedon Table
+##                        siteobsiid = rec.split('|')[0] # <-- represents siteobsiidref key
+##                        siteiid = ""
+##
+##                        # iterate through the siteobs values looking for a siteobsiid match
+##                        # ['|6/24/1991 12:00:00 AM|Actual Site Observation Date||2|||||||||||||||||0|||||||||0|0|0||||||||||||||||10873|10818']
+##                        for v in pedonGDBtables.get('siteobs'):
+##                            if v.split('|')[-1] == siteobsiid:
+##                                siteiid = v.split('|')[-2]
+##
+##                        if siteiid:
+##                            for v in pedonGDBtables.get('site'):
+##                                if v.split('|')[-1] == siteiid:
+##                                    try:
+##                                        xValue = float(v.split('|')[-6])
+##                                        yValue = float(v.split('|')[-7])
+##                                    except:
+##                                        xValue = 0.00
+##                                        yValue = 90.0
+##
+##                        else:
+##                            AddMsgAndPrint("\tsiteiid value not found for siteobs value: " + str(siteobsiid),2)
+##
+##                    newRow.append((xValue,yValue))
 
                     try:
                         cursor.insertRow(newRow)
@@ -1329,7 +1365,12 @@ def importPedonData(tblAliases,verbose=False):
         return False
 
     except:
-##        AddMsgAndPrint("Unhandled exception (createFGDB)", 2)
+        AddMsgAndPrint("Unhandled exception (importPedonData)", 2)
+        print "\nRec: " + rec
+        print "\nfldNo: " + str(fldNo)
+        print "\nLength of nameOfFields: " + str(len(nameOfFields))
+        print "\nLength of fldLengths: " + str(len(fldLengths))
+
         errorMsg()
         return False
 
@@ -1449,16 +1490,16 @@ if __name__ == '__main__':
 
     try:
 
-        GDBname = arcpy.GetParameter(0)
-        outputFolder = arcpy.GetParameterAsText(1)
-        question = arcpy.GetParameterAsText(2)
+##        GDBname = arcpy.GetParameter(0)
+##        outputFolder = arcpy.GetParameterAsText(1)
+##        question = arcpy.GetParameterAsText(2)
 
-##        GDBname = 'Dylan_20170417'
-##        outputFolder = r'M:\Temp'
+        GDBname = 'OnePedon'
+        outputFolder = r'C:\Temp'
 
-        if question != "dylanbeaudette":
-            AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
-            exit()
+##        if question != "dylanbeaudette":
+##            AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
+##            exit()
 
         """ ------------------------------------------------------------------------ Set Scratch Workspace -------------------------------------------------------------------------------------"""
         scratchWS = setScratchWorkspace()
@@ -1471,9 +1512,11 @@ if __name__ == '__main__':
         """ -------------------------------------------------- Get a list of PedonIDs that are within the bounding box from NASIS -----------------------------------------------------------------
             ---------------------------------------------------- Uses the 'WEB_EXPORT_PEDON_BOX_COUNT' NASIS report --------------------------------------------------------------------------"""
         # ['10851', '10852', '10853', '10854']
-        pedonidList = getListOfWebPedonIDs()
+        pedonidList = getListOfAllPedonIDs()
         ##pedonidList = pedonidList[0:10000]
+        ##pedonidList = ['10851', '10852', '10853', '10854']
         ##pedonidList = [(line.rstrip('\n')).split(',') for line in open(inputTextFile)].pop()
+
         totalPedons = len(pedonidList)
         AddMsgAndPrint("\n" + splitThousands(totalPedons) + " pedons will be downloaded from NASIS")
 
@@ -1483,6 +1526,7 @@ if __name__ == '__main__':
             for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
         pedonFGDB = createPedonFGDB()
+        #pedonFGDB = os.path.join(outputFolder,GDBname + ".gdb")
 
         if not pedonFGDB:
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
@@ -1535,13 +1579,14 @@ if __name__ == '__main__':
             if len(badStrings) > 1:
                 AddMsgAndPrint("\n\tMultiple failed attempts with the following pedon IDs:",2)
 
-                n = 1
-                for string in badStrings:
-                    AddMsgAndPrint("\t\tFailed attempt #" + str(n) + ":" + str(len(string.split(','))) + " pedons Failed",2)
-                    n+=1
-
-                AddMsgAndPrint("\nExiting the tool without completely finishing.",2)
-                sys.exit()
+## Fix this!!!
+##                n = 1
+##                for string in badStrings:
+##                    AddMsgAndPrint("\t\tFailed attempt #" + str(n) + ":" + str(len(string.split(','))) + " pedons Failed",2)
+##                    n+=1
+##
+##                AddMsgAndPrint("\nExiting the tool without completely finishing.",2)
+##                sys.exit()
 
             """ Strictly for formatting print message"""
             if numOfPedonStrings > 2:
@@ -1569,7 +1614,7 @@ if __name__ == '__main__':
                 # Import Pedon Information into Pedon FGDB
                 if len(pedonGDBtables['pedon']):
                     if not importPedonData(tblAliases,verbose=(True if i==numOfPedonStrings else False)):
-                        sys.exit()
+                        exit()
                     del pedonGDBtables
 
                     # recreate pedonGDBtables dictionary only if the requests are not done
