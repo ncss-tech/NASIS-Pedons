@@ -1490,16 +1490,16 @@ if __name__ == '__main__':
 
     try:
 
-##        GDBname = arcpy.GetParameter(0)
-##        outputFolder = arcpy.GetParameterAsText(1)
-##        question = arcpy.GetParameterAsText(2)
+        GDBname = arcpy.GetParameter(0)
+        outputFolder = arcpy.GetParameterAsText(1)
+        question = arcpy.GetParameterAsText(2)
 
-        GDBname = 'OnePedon'
-        outputFolder = r'C:\Temp'
+##        GDBname = 'OnePedon'
+##        outputFolder = r'C:\Temp'
 
-##        if question != "dylanbeaudette":
-##            AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
-##            exit()
+        if question != "dylanbeaudette":
+            AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
+            exit()
 
         """ ------------------------------------------------------------------------ Set Scratch Workspace -------------------------------------------------------------------------------------"""
         scratchWS = setScratchWorkspace()
