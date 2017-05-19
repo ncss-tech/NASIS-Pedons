@@ -1479,7 +1479,7 @@ Column order
 
 # =========================================== Main Body ==========================================
 # Import modules
-import sys, string, os, traceback, re, arcpy, socket, httplib, time
+import sys, string, os, traceback, re, arcpy, socket, httplib, time, base64
 from arcpy import env
 from urllib2 import urlopen, URLError, HTTPError
 from sys import getsizeof, stderr
@@ -1497,7 +1497,7 @@ if __name__ == '__main__':
 ##        GDBname = 'OnePedon'
 ##        outputFolder = r'C:\Temp'
 
-        if question != "dylanbeaudette":
+        if base64.b64encode(question) == r'ZHlsYW5iZWF1ZGV0dGU=':
             AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
             exit()
 
