@@ -25,7 +25,7 @@ def AddMsgAndPrint(msg, severity=0):
     #
     #Split the message on \n first, so that if it's multiple lines, a GPMessage will be added for each line
     try:
-        #print msg
+        print msg
 
         #for string in msg.split('\n'):
             #Add a geoprocessing message (in case this is run as a tool)
@@ -835,6 +835,10 @@ def getPedonHorizon(pedonList):
                 if not field.type.lower() in ("oid","geometry"):
                     numOfValidFlds +=1
 
+            # Add 2 more fields to the pedon table for X,Y
+            if table == 'pedon':
+                numOfValidFlds += 2
+
             tableFldDict[table] = numOfValidFlds
             del numOfFields;numOfValidFlds
 
@@ -1021,9 +1025,14 @@ def getPedonHorizon(pedonList):
 
 ## ================================================================================================================
 def importPedonData(tblAliases,verbose=False):
+    """ This function will purge the contents from the pedonGDBtables dictionary which contains all of the pedon
+        data into the pedon FGDB.  Depending on the number of pedons in the user's AOI, this function will be
+        used multiple times.  The pedonGDBtables dictionary could possilbly allocate all of the computer's
+        memory so a fail-save was built in to make sure a memory exception error wasn't encountered.  This
+        function is invoked when approximately 40,000 pedons have been retrieved from the server and stored in \
+        memory."""
 
     try:
-
         if verbose: AddMsgAndPrint("\nImporting Pedon Data into FGDB")
         arcpy.SetProgressorLabel("Importing Pedon Data into FGDB")
 
@@ -1045,7 +1054,7 @@ def importPedonData(tblAliases,verbose=False):
         tblKeys.sort()
 
         """ ---------------------------------------------------"""
-        arcpy.SetProgressor("step","Importing Pedon Data into FGDB",0,len(tblKeys),1)
+        arcpy.SetProgressor("step","Importing Pedon Data into FGDB table: ",0,len(tblKeys),1)
         for table in tblKeys:
 
             arcpy.SetProgressorLabel("Importing Pedon Data into FGDB: " + table)
@@ -1076,7 +1085,7 @@ def importPedonData(tblAliases,verbose=False):
                 # Put all the field names in a list
                 fieldList = arcpy.Describe(GDBtable).fields
                 nameOfFields = []
-                fldLengths = list()
+                fldLengths = []
 
                 for field in fieldList:
 
@@ -1089,20 +1098,32 @@ def importPedonData(tblAliases,verbose=False):
                         else:
                             fldLengths.append(0)
 
-                # Site feature class will have X,Y geometry added; Add XY token to list
-                if table == 'site':
-                    nameOfFields.append('SHAPE@XY')
+                # Add a new field at the end called 'labsampleIndicator' to indicate whether
+                # record is a LAB pedon. Addd XY token to list
+                if table == 'pedon':
 
-                    latField = [f.name for f in arcpy.ListFields(table,'latstddecimaldegrees')][0]
-                    longField = [f.name for f in arcpy.ListFields(table,'longstddecimaldegrees')][0]
-                    latFieldIndex = nameOfFields.index(latField)
-                    longFieldIndex = nameOfFields.index(longField)
+##                    labField = 'labsampleIndicator'
+##                    arcpy.AddField_management(GDBtable,'labsampleIndicator','TEXT','#','#',3,'Lab Sample Indicator','#','#','#')
+##                    nameOfFields.append(labField)
+
+                    # Pedon feature class will have X,Y geometry added; Add XY token to list
+                    nameOfFields.append('SHAPE@XY')
+                    fldLengths.append(0)  # X coord
+                    fldLengths.append(0)  # Y coord
+
+##                    peiidFld = [f.name for f in arcpy.ListFields(table,'peiid')][0]
+##                    peiidIndex = nameOfFields.index(peiidFld)
+
+
+                """ -------------------------------- Insert Rows ------------------------------------------
+                    Iterate through every value from a specific table in the pedonGDBtables dictary
+                    and add it to the appropriate FGDB table  Truncate the value if it exceeds the
+                    max number of characters.  Set the value to 'None' if it is an empty string."""
 
                 # Initiate the insert cursor object using all of the fields
                 cursor = arcpy.da.InsertCursor(GDBtable,nameOfFields)
                 recNum = 0
 
-                """ -------------------------------- Insert Rows -------------------------------------"""
                 # '"S1962WI025001","43","15","9","North","89","7","56","West",,"Dane County, Wisconsin. 100 yards south of road."'
                 for rec in pedonGDBtables[table]:
 
@@ -1114,7 +1135,7 @@ def importPedonData(tblAliases,verbose=False):
                         value = value.strip()
                         fldLen = fldLengths[fldNo]
 
-                        if value == '':   ## Empty String
+                        if value == '' or value == 'NULL':   ## Empty String
                             value = None
 
                         elif fldLen > 0:  ## record is a string, truncate it
@@ -1126,47 +1147,51 @@ def importPedonData(tblAliases,verbose=False):
                         newRow.append(value)
                         fldNo += 1
 
-                    if table == 'site':
-                        # Combine the X,Y value from the existing record and append it at the
-                        # of the list to be associated with the X,Y token
+                        del value, fldLen
+
+                    # Add XY coordinates to the pedon point feature class.
+                    if table == 'pedon':
                         try:
-                            xValue = float([rec.replace('"','').split('|')][0][longFieldIndex])
-                            yValue = float([rec.replace('"','').split('|')][0][latFieldIndex])
+                            xValue = float(newRow[-1])  # Long
+                            yValue = float(newRow[-2])  # Lat
                         except:
                             xValue = 0.00
                             yValue = 90.0
 
+                        # remove the X,Y coords from the newRow list b/c X,Y
+                        # fields don't exist in the pedon Table
+                        newRow = newRow[:-2]
+
                         newRow.append((xValue,yValue))
+                        del xValue,yValue
 
                     try:
                         cursor.insertRow(newRow)
                         numOfRowsAdded += 1;recNum += 1
 
+                    except arcpy.ExecuteError:
+                        AddMsgAndPrint("\n\tError in :" + table + " table: Field No: " + str(fldNo) + " : " + str(rec),2)
+                        AddMsgAndPrint("\n\t" + arcpy.GetMessages(2),2)
+                        break
                     except:
-                        AddMsgAndPrint("\n\tError in: " + table + " table",2)
-
-                        if not len(nameOfFields) == len([rec.split('|')][0]):
-                            AddMsgAndPrint("\tNumber of fields in table: " + str(len(nameOfFields)),2)
-                            AddMsgAndPrint("\tNumber of fields in report: " + str(len([rec.split('|')][0])),2)
-
-                        AddMsgAndPrint("\tRecord Values: " + str(newRow),2)
-
+                        AddMsgAndPrint("\n\tError in: " + table + " table")
+                        print "\n\t" + str(rec)
+                        print "\n\tRecord Number: " + str(recNum)
+                        AddMsgAndPrint("\tNumber of Fields in GDB: " + str(len(nameOfFields)))
+                        AddMsgAndPrint("\tNumber of fields in report: " + str(len([rec.split('|')][0])))
                         errorMsg()
                         break
 
                     del newRow,fldNo
 
                 # Report the # of records added to the table
-                tableRecords = int(arcpy.GetCount_management(GDBtable).getOutput(0))
-
                 if bAliasName:
                     secondTab = (maxCharAlias - len(aliasName)) * " "
-                    if verbose: AddMsgAndPrint("\t" + table + firstTab + aliasName + secondTab + " Records Added: " + splitThousands(tableRecords),1)
-                    #if verbose: AddMsgAndPrint("\t" + table + firstTab + aliasName + secondTab + " Records Added: " + splitThousands(numOfRowsAdded),1)
+                    if verbose: AddMsgAndPrint("\t" + table + firstTab + aliasName + secondTab + " Records Added: " + splitThousands(numOfRowsAdded),1)
                 else:
-                    if verbose: AddMsgAndPrint("\t" + table + firstTab + " Records Added: " + splitThousands(tableRecords),1)
+                    if verbose: AddMsgAndPrint("\t" + table + firstTab + " Records Added: " + splitThousands(numOfRowsAdded),1)
 
-                del numOfRowsAdded,GDBtable,fieldList,nameOfFields,fldLengths,cursor,tableRecords
+                del numOfRowsAdded,GDBtable,fieldList,nameOfFields,fldLengths,cursor
 
             # Table had no records; still print it out
             else:
@@ -1186,7 +1211,6 @@ def importPedonData(tblAliases,verbose=False):
         return False
 
     except:
-##        AddMsgAndPrint("Unhandled exception (createFGDB)", 2)
         errorMsg()
         return False
 
@@ -1310,9 +1334,9 @@ if __name__ == '__main__':
         GDBname = arcpy.GetParameter(1)
         outputFolder = arcpy.GetParameterAsText(2)
 
-##        inputTextFile = r'P:\SSR10_Geodata\MLRAGeodata\pedons\PEDON_PEIID_LIST.txt'
-##        GDBname = 'Dylan'
-##        outputFolder = r'P:\SSR10_Geodata\MLRAGeodata\pedons'
+##        inputTextFile = r'E:\All_Pedons\peiidList.txt'
+##        GDBname = 'Test'
+##        outputFolder = r'E:\All_Pedons'
 
         """ ------------------------------------------------------------------------ Set Scratch Workspace -------------------------------------------------------------------------------------"""
         scratchWS = setScratchWorkspace()
@@ -1335,6 +1359,7 @@ if __name__ == '__main__':
             for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
         pedonFGDB = createPedonFGDB()
+        #pedonFGDB = r'E:\All_Pedons\LAB_Data_NASIS_Morphological_05232017.gdb'
 
         if pedonFGDB == "":
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
@@ -1412,13 +1437,13 @@ if __name__ == '__main__':
             if len(badStrings) > 1:
                 AddMsgAndPrint("\n\tMultiple failed attempts with the following pedon IDs:",2)
 
-                n = 1
-                for string in badStrings:
-                    AddMsgAndPrint("\t\tFailed attempt #" + str(n) + ":" + str(len(string.split(','))) + " pedons Failed",2)
-                    n+=1
-
-                AddMsgAndPrint("\nExiting the tool without completely finishing.",2)
-                sys.exit()
+##                n = 1
+##                for string in badStrings:
+##                    AddMsgAndPrint("\t\tFailed attempt #" + str(n) + ":" + str(len(string.split(','))) + " pedons Failed",2)
+##                    n+=1
+##
+##                AddMsgAndPrint("\nExiting the tool without completely finishing.",2)
+##                sys.exit()
 
             """ Strictly for formatting print message"""
             if numOfPedonStrings > 2:

@@ -1596,7 +1596,7 @@ if __name__ == '__main__':
                 AddMsgAndPrint("Retrieving pedon data from NASIS for " + str(len(pedonString.split(','))) + " pedons.",0)
                 arcpy.SetProgressorLabel("Retrieving pedon data from NASIS for " + str(len(pedonString.split(','))) + " pedons.")
 
-            # Submit string of pedons to server
+            """ Submit string of pedons to server"""
             if not getPedonHorizon(pedonString):
                 AddMsgAndPrint("\n\tFailed to receive pedon horizon info from NASIS",2)
                 badStrings += pedonString
