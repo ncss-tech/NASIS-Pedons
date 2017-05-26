@@ -569,7 +569,7 @@ def parsePedonsIntoLists():
 
         if not numOfPedonStrings:
             AddMsgAndPrint("\n\t Something Happened here.....WTF!",2)
-            sys.exit()
+            exit()
 
         else:
             return listOfPedonStrings,numOfPedonStrings
@@ -1507,7 +1507,7 @@ if __name__ == '__main__':
 
         if not scratchWS:
             AddMsgAndPrint("\n Failed to scratch workspace; Try setting it manually",2)
-            sys.exit()
+            exit()
 
         """ -------------------------------------------------- Get a list of PedonIDs that are within the bounding box from NASIS -----------------------------------------------------------------
             ---------------------------------------------------- Uses the 'WEB_EXPORT_PEDON_BOX_COUNT' NASIS report --------------------------------------------------------------------------"""
@@ -1530,7 +1530,7 @@ if __name__ == '__main__':
 
         if not pedonFGDB:
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
-            sys.exit()
+            exit()
 
         # Acquire Aliases.  This is only used for printing purposes
         tblAliases = dict()
@@ -1655,7 +1655,7 @@ if __name__ == '__main__':
 
     except MemoryError:
         AddMsgAndPrint("\n\nOut of Memory Genius! --- " + str(sys.getsizeof(pedonGDBtables)),2)
-        sys.exit()
+        exit()
 
     except:
         errorMsg()

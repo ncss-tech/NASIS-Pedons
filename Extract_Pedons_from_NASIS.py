@@ -699,7 +699,7 @@ def filterPedonsByFeature(feature):
         return False
 
     except:
-        AddMsgAndPrint("Unhandled exception (createFGDB). EXITING!", 2)
+        AddMsgAndPrint("Unhandled exception (filterPedonsByFeature). EXITING!", 2)
         errorMsg()
         return False
 
