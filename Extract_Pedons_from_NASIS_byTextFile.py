@@ -36,7 +36,7 @@ def AddMsgAndPrint(msg, severity=0):
             arcpy.AddWarning(msg)
 
         elif severity == 2:
-            arcpy.AddError("\n" + msg)
+            arcpy.AddError(msg)
 
     except:
         pass
@@ -1011,13 +1011,13 @@ if __name__ == '__main__':
 
     try:
 
-        inputTextFile = arcpy.GetParameterAsText(0)
-        GDBname = arcpy.GetParameter(1)
-        outputFolder = arcpy.GetParameterAsText(2)
+##        inputTextFile = arcpy.GetParameterAsText(0)
+##        GDBname = arcpy.GetParameter(1)
+##        outputFolder = arcpy.GetParameterAsText(2)
 
-##        inputTextFile = r'E:\All_Pedons\peiidList.txt'
-##        GDBname = 'Test'
-##        outputFolder = r'E:\All_Pedons'
+        inputTextFile = r'E:\All_Pedons\TEST.txt'
+        GDBname = 'totalJunk'
+        outputFolder = r'E:\All_Pedons'
 
         """ ------------------------------------------------------------------------ Set Scratch Workspace -------------------------------------------------------------------------------------"""
         scratchWS = setScratchWorkspace()
@@ -1107,9 +1107,6 @@ if __name__ == '__main__':
 
         badStrings = list()                           # list containing lists of pedons that failed
 
-        # Text file that will be created with pedonIDs that did not get collected
-        errorFile = outputFolder + os.sep + os.path.basename(pedonFGDB).split('.')[0] + "_error.txt"
-
         """ --------- iterate through groups of pedonIDs to retrieve their data ------------ """
         for pedonString in listOfPedonStrings:
 
@@ -1126,18 +1123,8 @@ if __name__ == '__main__':
                 arcpy.SetProgressorLabel("Retrieving pedon data from NASIS for " + str(len(pedonString.split(','))) + " pedons.")
 
             """ Submit string of pedons to server to get pedon information """
-            # Write any peiids that fail to an error Text file
             if not getPedonHorizon(pedonString):
-
                 AddMsgAndPrint("\tFailed to receive pedon horizon info from NASIS",2)
-
-                f = open(errorFile,'a+')
-                if os.stat(errorFile).st_size == 0:
-                    f.write(str(pedonString))
-                else:
-                    f.write("," + str(pedonString))
-                f.close()
-
                 badStrings += pedonString
                 k-=numOfPedonsInPedonString
 
@@ -1153,7 +1140,7 @@ if __name__ == '__main__':
                 # Import Pedon Information into Pedon FGDB
                 if len(pedonGDBtables['pedon']):
                     if not importPedonData(tblAliases,verbose=(True if i==numOfPedonStrings else False)):
-                        sys.exit()
+                        exit()
 
                     del pedonGDBtables
 
@@ -1164,12 +1151,33 @@ if __name__ == '__main__':
             i+=1
 
         """ ------------------------------------ Report Summary of results -----------------------------------"""
-        pedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'pedon').getOutput(0))
+        pedonTable = os.path.join(pedonFGDB,'pedon')
+        pedonCount = int(arcpy.GetCount_management(pedonTable).getOutput(0))
+
+        # Text file that will be created with pedonIDs that did not get collected
+        errorFile = outputFolder + os.sep + os.path.basename(pedonFGDB).split('.')[0] + "_error.txt"
+
         if totalPedons == pedonCount:
             AddMsgAndPrint("\n\nSuccessfully downloaded " + splitThousands(totalPedons) + " pedons from NASIS",0)
         else:
+            difference = totalPedons - pedonCount
             AddMsgAndPrint("\n\nDownloaded " + splitThousands(pedonCount) + " from NASIS",2)
-            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - pedonCount) + " pedons from NASIS",2)
+            AddMsgAndPrint("\tFailed to download " + splitThousands(difference) + " pedons from NASIS:",2)
+
+            downloadedPedons = [str(row[0]) for row in arcpy.da.SearchCursor(pedonTable,'peiid')]
+            missingPedons = str(list(set(pedonList) - set(downloadedPedons))).replace('[','').replace(']','').replace('\'','')
+
+            f = open(errorFile,'a+')
+            if os.stat(errorFile).st_size == 0:
+                f.write(str(missingPedons))
+            else:
+                f.write("," + str(missingPedons))
+            f.close()
+
+            if difference < 20:
+                AddMsgAndPrint("\t\t" + missingPedons)
+
+            AddMsgAndPrint("\n\tThe Missing Pedons have been written to " + errorFile + " files",2)
 
         """ ---------------------------Add Pedon Feature Class to ArcMap Session if available ------------------"""
         try:

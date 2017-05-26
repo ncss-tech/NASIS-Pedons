@@ -1894,18 +1894,6 @@ if __name__ == '__main__':
             j+=numOfPedonsInPedonString
             k+=numOfPedonsInPedonString
 
-            """ Exit if There have been multiple failed attempts at requesting pedon data"""
-            if len(badStrings) > 2:
-                AddMsgAndPrint("\n\tMultiple failed attempts with the following pedon IDs:",2)
-
-                n = 1
-                for string in badStrings:
-                    AddMsgAndPrint("\t\tFailed attempt #" + str(n) + ":" + str(len(string.split(','))) + " pedons Failed",2)
-                    n+=1
-
-                AddMsgAndPrint("\nExiting the tool without completely finishing.",2)
-                exit()
-
             """ Strictly for formatting print message """
             if numOfPedonStrings > 1:
                 AddMsgAndPrint("\tRequest " + splitThousands(i) + " of " + splitThousands(numOfPedonStrings) + " for " + str(len(pedonString.split(','))) + " pedons",0)
@@ -1944,12 +1932,33 @@ if __name__ == '__main__':
             i+=1
 
         """ ------------------------------------ Report Summary of results -----------------------------------"""
-        pedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'pedon').getOutput(0))
+        pedonTable = os.path.join(pedonFGDB,'pedon')
+        pedonCount = int(arcpy.GetCount_management(pedonTable).getOutput(0))
+
+        # Text file that will be created with pedonIDs that did not get collected
+        errorFile = outputFolder + os.sep + os.path.basename(pedonFGDB).split('.')[0] + "_error.txt"
+
         if totalPedons == pedonCount:
             AddMsgAndPrint("\n\nSuccessfully downloaded " + splitThousands(totalPedons) + " pedons from NASIS",0)
         else:
+            difference = totalPedons - pedonCount
             AddMsgAndPrint("\n\nDownloaded " + splitThousands(pedonCount) + " from NASIS",2)
-            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - pedonCount) + " pedons from NASIS",2)
+            AddMsgAndPrint("\tFailed to download " + splitThousands(difference) + " pedons from NASIS:",2)
+
+            downloadedPedons = [str(row[0]) for row in arcpy.da.SearchCursor(pedonTable,'peiid')]
+            missingPedons = str(list(set(pedonList) - set(downloadedPedons))).replace('[','').replace(']','').replace('\'','')
+
+            f = open(errorFile,'a+')
+            if os.stat(errorFile).st_size == 0:
+                f.write(str(missingPedons))
+            else:
+                f.write("," + str(missingPedons))
+            f.close()
+
+            if difference < 20:
+                AddMsgAndPrint("\t\t" + missingPedons)
+
+            AddMsgAndPrint("\n\tThe Missing Pedons have been written to " + errorFile + " files",2)
 
         """ ---------------------------Add Pedon Feature Class to ArcMap Session if available ------------------"""
         try:

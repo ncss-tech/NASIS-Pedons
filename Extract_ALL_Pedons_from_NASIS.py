@@ -1568,25 +1568,12 @@ if __name__ == '__main__':
 
         badStrings = list()                           # lists containing lists of pedons that failed
 
-        """ --------- iterate through groups of pedonIDs to retrieve their data"""
+        """ --------- iterate through groups of pedonIDs to retrieve their data ------------ """
         for pedonString in listOfPedonStrings:
 
             numOfPedonsInPedonString = len(pedonString.split(','))
             j+=numOfPedonsInPedonString
             k+=numOfPedonsInPedonString
-
-            """ Exit if There have been multiple failed attempts at requesting pedon data"""
-            if len(badStrings) > 1:
-                AddMsgAndPrint("\n\tMultiple failed attempts with the following pedon IDs:",2)
-
-## Fix this!!!
-##                n = 1
-##                for string in badStrings:
-##                    AddMsgAndPrint("\t\tFailed attempt #" + str(n) + ":" + str(len(string.split(','))) + " pedons Failed",2)
-##                    n+=1
-##
-##                AddMsgAndPrint("\nExiting the tool without completely finishing.",2)
-##                sys.exit()
 
             """ Strictly for formatting print message"""
             if numOfPedonStrings > 2:
@@ -1596,9 +1583,9 @@ if __name__ == '__main__':
                 AddMsgAndPrint("Retrieving pedon data from NASIS for " + str(len(pedonString.split(','))) + " pedons.",0)
                 arcpy.SetProgressorLabel("Retrieving pedon data from NASIS for " + str(len(pedonString.split(','))) + " pedons.")
 
-            """ Submit string of pedons to server"""
+            """ Submit string of pedons to server to get pedon information """
             if not getPedonHorizon(pedonString):
-                AddMsgAndPrint("\n\tFailed to receive pedon horizon info from NASIS",2)
+                AddMsgAndPrint("\tFailed to receive pedon horizon info from NASIS",2)
                 badStrings += pedonString
                 k-=numOfPedonsInPedonString
 
@@ -1615,6 +1602,7 @@ if __name__ == '__main__':
                 if len(pedonGDBtables['pedon']):
                     if not importPedonData(tblAliases,verbose=(True if i==numOfPedonStrings else False)):
                         exit()
+
                     del pedonGDBtables
 
                     # recreate pedonGDBtables dictionary only if the requests are not done
@@ -1624,20 +1612,33 @@ if __name__ == '__main__':
             i+=1
 
         """ ------------------------------------ Report Summary of results -----------------------------------"""
-        pedonCount = int(arcpy.GetCount_management(pedonFGDB + os.sep + 'pedon').getOutput(0))
+        pedonTable = os.path.join(pedonFGDB,'pedon')
+        pedonCount = int(arcpy.GetCount_management(pedonTable).getOutput(0))
+
+        # Text file that will be created with pedonIDs that did not get collected
+        errorFile = outputFolder + os.sep + os.path.basename(pedonFGDB).split('.')[0] + "_error.txt"
+
         if totalPedons == pedonCount:
             AddMsgAndPrint("\n\nSuccessfully downloaded " + splitThousands(totalPedons) + " pedons from NASIS",0)
         else:
+            difference = totalPedons - pedonCount
             AddMsgAndPrint("\n\nDownloaded " + splitThousands(pedonCount) + " from NASIS",2)
-            AddMsgAndPrint("\tFailed to download " + splitThousands(totalPedons - pedonCount) + " pedons from NASIS",2)
+            AddMsgAndPrint("\tFailed to download " + splitThousands(difference) + " pedons from NASIS:",2)
 
-        # Inform user of number of Pedons with no coordinates
-        siteTable = pedonFGDB + os.sep + 'site'
-        latField = 'latstddecimaldegrees'
-        expression = latField + " IS NULL"
-        noCoords = len([row[0] for row in arcpy.da.SearchCursor(siteTable,latField,where_clause=expression)])
+            downloadedPedons = [str(row[0]) for row in arcpy.da.SearchCursor(pedonTable,'peiid')]
+            missingPedons = str(list(set(pedonList) - set(downloadedPedons))).replace('[','').replace(']','').replace('\'','')
 
-        if noCoords: AddMsgAndPrint("\tNumber of pedons with no coordinates: " + splitThousands(noCoords),1)
+            f = open(errorFile,'a+')
+            if os.stat(errorFile).st_size == 0:
+                f.write(str(missingPedons))
+            else:
+                f.write("," + str(missingPedons))
+            f.close()
+
+            if difference < 20:
+                AddMsgAndPrint("\t\t" + missingPedons)
+
+            AddMsgAndPrint("\n\tThe Missing Pedons have been written to " + errorFile + " files",2)
 
         """ ---------------------------Add Pedon Feature Class to ArcMap Session if available ------------------"""
         try:
