@@ -76,7 +76,7 @@ def convertTablesToCSV(GDB):
                 fieldNames = [f.name for f in arcpy.ListFields(table)]
 
                 tempTable = table + "Temp.csv"
-                permTable = outputFolder + os.sep + table + ".csv"
+                permTable = outputFolder + os.sep + table + ".txt"
 
                 if arcpy.Exists(outputFolder + os.sep + tempTable):
                     arcpy.Delete_management(outputFolder + os.sep + tempTable)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     inputGDB = arcpy.GetParameter(0)
     outputFolder = arcpy.GetParameterAsText(1)
 
-    inputGDB = r'E:\All_Pedons\NCSS_Characterization_Database\NCSS_Soil_Characterization_Database_FGDB_20170517.gdb'
-    outputFolder = r'E:\All_Pedons\NCSS_Characterization_Database\CSV_files'
+    inputGDB = r'E:\All_Pedons\NCSS_Characterization_Database\NCSS_Lab_Data_Mart_05152017.gdb'
+    outputFolder = r'E:\All_Pedons\NCSS_Characterization_Database\CSV_files_new'
 
     convertTablesToCSV(inputGDB)
