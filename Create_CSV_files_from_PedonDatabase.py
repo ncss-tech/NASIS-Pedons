@@ -44,41 +44,71 @@ def errorMsg():
         AddMsgAndPrint("Unhandled error in errorMsg method", 2)
         pass
 
-## ===================================================================================
-def getListOfTables(GDB):
+## ================================================================================================================
+def splitThousands(someNumber):
+    """ will determine where to put a thousands seperator if one is needed.
+        Input is an integer.  Integer with or without thousands seperator is returned."""
 
     try:
-        tableDict = dict()
-        env.workspace = GDB
-
-        for table in arcpy.ListTables():
-
-            if not tableDict.has_key(table):
-
-                numOfRows = int(arcpy.GetCount_management(table).getOutput(0))
-                numOfFields = 0
-                fmObject = arcpy.FieldMappings()
-
-                #Populate field object to remove OID field
-                for field in arcpy.ListFields(table):
-                    if not field.type == "OID" and not field.type == "Geometry":
-                        fmObject.addFieldMap(field.name)
-                        numOfFields += 1
-
-                tableDict[table] = (len(table),table + ".csv",numOfRows,fmObject,numOfFields)
-
-        if not len(tableDict):
-            AddMsgAndPrint("\nCould not get table info from " + GDB,2)
-            exit()
+        return re.sub(r'(\d{3})(?=\d)', r'\1,', str(someNumber)[::-1])[::-1]
 
     except:
+        errorMsg()
+        return someNumber
+
+## ===================================================================================
+def convertTablesToCSV(GDB):
+
+    try:
+        env.workspace = GDB
+        tablesToConvert = [table for table in arcpy.ListTables()]
+
+        for fc in arcpy.ListFeatureClasses():
+            tablesToConvert.append(fc)
+
+        if len(tablesToConvert):
+
+            for table in tablesToConvert:
+
+                #if not table == 'phtext':continue
+
+                numOfRows = int(arcpy.GetCount_management(table).getOutput(0))
+                fieldNames = [f.name for f in arcpy.ListFields(table)]
+
+                tempTable = table + "Temp.csv"
+                permTable = outputFolder + os.sep + table + ".csv"
+
+                if arcpy.Exists(outputFolder + os.sep + tempTable):
+                    arcpy.Delete_management(outputFolder + os.sep + tempTable)
+
+                if arcpy.Exists(permTable):
+                    continue
+                    #arcpy.Delete_management(permTable)
+
+                AddMsgAndPrint("Converting " + table + " to CSV file.  Num of records: " + splitThousands(numOfRows))
+                arcpy.TableToTable_conversion(table,outputFolder,tempTable)
+
+                # file needs to be opened in Universal mode otherwise an error is thrown:
+                # new-line character seen in unquoted field - do you need to open the file in universal-newline mode
+                with open(outputFolder + os.sep + tempTable,'rU') as csvFile:
+                    #csvReader = csv.reader(open(csvFile, 'rU'), dialect=csv.excel_tab)
+                    csvReader = csv.reader(csvFile)
+                    with open(permTable,"wb") as csvResult:
+                        csvWrite = csv.writer(csvResult,delimiter='|',quotechar='"')
+                        for row in csvReader:
+                            csvWrite.writerow(row[1:])
+
+                arcpy.Delete_management(outputFolder + os.sep + tempTable)
+
+    except:
+        errorMsg()
         AddMsgAndPrint("\nUnable to get table information from: " + GDB,2)
         exit()
 
 
 # =========================================== Main Body ==========================================
 # Import modules
-import sys, string, os, traceback, re, arcpy
+import sys, string, os, traceback, re, arcpy,csv
 from arcpy import env
 
 if __name__ == '__main__':
@@ -86,4 +116,7 @@ if __name__ == '__main__':
     inputGDB = arcpy.GetParameter(0)
     outputFolder = arcpy.GetParameterAsText(1)
 
-    tablesToConvert = getListOfTables(inputGDB)
+    inputGDB = r'E:\All_Pedons\NCSS_Characterization_Database\NCSS_Soil_Characterization_Database_FGDB_20170517.gdb'
+    outputFolder = r'E:\All_Pedons\NCSS_Characterization_Database\CSV_files'
+
+    convertTablesToCSV(inputGDB)
