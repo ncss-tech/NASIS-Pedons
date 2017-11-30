@@ -116,7 +116,7 @@ if __name__ == '__main__':
     inputGDB = arcpy.GetParameter(0)
     outputFolder = arcpy.GetParameterAsText(1)
 
-    inputGDB = r'E:\All_Pedons\NCSS_Characterization_Database\NCSS_Lab_Data_Mart_05152017.gdb'
-    outputFolder = r'E:\All_Pedons\NCSS_Characterization_Database\CSV_files_new'
+    inputGDB = r'N:\flex\Dylan\NCSS_Characterization_Database\NCSS_Lab_Data_Mart_05152017.gdb'
+    outputFolder = r'N:\flex\Dylan\NCSS_Characterization_Database\CSV_files'
 
     convertTablesToCSV(inputGDB)
