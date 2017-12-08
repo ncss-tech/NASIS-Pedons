@@ -321,11 +321,14 @@ def getBoundingCoordinates(feature):
             arcpy.env.geographicTransformations = "WGS_1984_(ITRF00)_To_NAD_1983"
         elif inputDatum == "D_North_American_1927":
             arcpy.env.geographicTransformations = "WGS_1984_(ITRF00)_To_NAD_1927"
+        elif inputDatum == "D_NAD_1983_2011":
+            arcpy.env.geographicTransformations = "WGS_1984_(ITRF00)_To_NAD_1983_2011"
         elif inputDatum == "D_WGS_1984":
             arcpy.env.geographicTransformations = ""
         else:
             AddMsgAndPrint("\n\tGeo Transformation of Datum could not be set",2)
-            return False
+            AddMsgAndPrint("\tTry Projecting input layer to WGS 1984 Coordinate System",2)
+            return False, False, False, False
 
         # Factory code for WGS84 Coordinate System
         arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(4326)
