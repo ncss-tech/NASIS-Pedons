@@ -1497,7 +1497,7 @@ if __name__ == '__main__':
 ##        GDBname = 'OnePedon'
 ##        outputFolder = r'C:\Temp'
 
-        if base64.b64encode(question) == r'ZHlsYW5iZWF1ZGV0dGU=':
+        if not base64.b64encode(question) == r'ZHlsYW5iZWF1ZGV0dGU=':
             AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
             exit()
 
