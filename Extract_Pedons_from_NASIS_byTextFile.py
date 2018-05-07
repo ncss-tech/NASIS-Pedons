@@ -1015,7 +1015,7 @@ if __name__ == '__main__':
         GDBname = arcpy.GetParameter(1)
         outputFolder = arcpy.GetParameterAsText(2)
 
-##        inputTextFile = r'E:\All_Pedons\TEST.txt'
+##        inputTextFile = r'E:\All_Pedons\NASIS_Pedons\missing.txt'
 ##        GDBname = 'totalJunk'
 ##        outputFolder = r'E:\All_Pedons'
 
@@ -1040,7 +1040,7 @@ if __name__ == '__main__':
             for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
         pedonFGDB = createPedonFGDB()
-        #pedonFGDB = r'E:\All_Pedons\NASIS_Pedons\NASIS_Pedons_20180415.gdb'
+        #pedonFGDB = r'E:\All_Pedons\NASIS_Pedons\NASIS_Pedons_20180505.gdb'
 
         if pedonFGDB == "":
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
