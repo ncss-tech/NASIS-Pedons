@@ -137,7 +137,13 @@ if __name__ == '__main__':
 
     try:
 
+<<<<<<< .mine
+        FGDBpath = r'N:\Pedons\Historical_Pedons.gdb'
+||||||| .r32
+        FGDBpath = r'E:\All_Pedons\NASIS_Pedons\NASIS_Pedons_20180415.gdb'
+=======
         FGDBpath = r'E:\All_Pedons\NASIS_Pedons\NASIS_Pedons_20180505.gdb'
+>>>>>>> .r33
         arcpy.env.workspace = FGDBpath
 
         # Add attribute indexes to ALL tables and feature classes in FGDB
