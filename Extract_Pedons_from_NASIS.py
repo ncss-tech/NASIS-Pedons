@@ -831,10 +831,12 @@ def getTableAliases(pedonFGDBloc):
 
 ## ===============================================================================================================
 def createEmptyDictOfTables():
-    # Create a new dictionary called pedonGDBtables that will contain every table in the newly created
+    # Create a new dictionary called pedonGDBtablesDict that will contain every table in the newly created
     # pedonFGDB above as a key.  Individual records of tables will be added as values to the table keys.
     # These values will be in the form of lists.  This dictionary will be populated using the results of
-    # the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report.  Much faster than opening and closing cursors.
+    # the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report.  Much faster than opening and closing cursors every
+    # a request is made to nasis.  URL report contents will be parsed out to this dictionary.
+    # {'area': [],'areatype': [],'basalareatreescounted': [],'beltdata': [],'belttransectsummary': []........}
 
     try:
 
@@ -859,6 +861,50 @@ def createEmptyDictOfTables():
         AddMsgAndPrint("\nUnhandled exception (GetTableAliases)\n", 2)
         errorMsg()
         exit()
+
+## ===============================================================================================================
+def createTableFieldLookuup():
+    # This function will create a dictionary that will contain table:number of fields in order
+    # to double check that the values from the web report are correct. This was added b/c there
+    # were text fields that were getting disconnected in the report and being read as 2 lines
+    # and Jason couldn't address this issue in NASIS.  This also serves as a QC against values
+    # have an incorrect number of values relative to the available fields.  This has been a problem
+    # with values having a pipe (|) which causes a problem with splitting values.
+
+    try:
+
+        arcpy.env.workspace = pedonFGDB
+
+        tableInfoDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
+        validTables = arcpy.ListTables("*")
+        validTables.append('pedon')
+
+        for table in validTables:
+
+            # Skip any Metadata files
+            if table.find('Metadata') > -1: continue
+
+            uniqueFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+            numOfValidFlds = 0
+
+            for field in uniqueFields:
+                if not field.type.lower() in ("oid","geometry","FID"):
+                    numOfValidFlds +=1
+
+            # Add 2 more fields to the pedon table for X,Y
+            if table == 'pedon':
+                numOfValidFlds += 2
+
+            tableInfoDict[table] = numOfValidFlds
+            del uniqueFields;numOfValidFlds
+
+        return tableInfoDict
+
+    except:
+        AddMsgAndPrint("\nUnhandled exception (createTableFieldLookup)\n", 2)
+        errorMsg()
+        exit()
+
 
 ## ===============================================================================================================
 def parsePedonsIntoLists():
@@ -1244,36 +1290,36 @@ def getPedonHorizon(pedonList):
         else:
             tab = "\t"
 
-        """ ---------------------- Create a dictionary of number of fields per table -----------------"""
-        ''' Create a dictionary that will contain table:number of fields in order
-            to double check that the values from the web report are correct
-            this was added b/c there were text fields that were getting disconnected in the report
-            and being read as 2 lines -- Jason couldn't address this issue in NASIS '''
-
-        arcpy.env.workspace = pedonFGDB
-
-        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
-        validTables = arcpy.ListTables("*")
-        validTables.append('pedon')
-
-        for table in validTables:
-
-            # Skip any Metadata files
-            if table.find('Metadata') > -1: continue
-
-            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
-            numOfValidFlds = 0
-
-            for field in numOfFields:
-                if not field.type.lower() in ("oid","geometry"):
-                    numOfValidFlds +=1
-
-            # Add 2 more fields to the pedon table for X,Y
-            if table == 'pedon':
-                numOfValidFlds += 2
-
-            tableFldDict[table] = numOfValidFlds
-            del numOfFields;numOfValidFlds
+##        """ ---------------------- Create a dictionary of number of fields per table -----------------"""
+##        ''' Create a dictionary that will contain table:number of fields in order
+##            to double check that the values from the web report are correct
+##            this was added b/c there were text fields that were getting disconnected in the report
+##            and being read as 2 lines -- Jason couldn't address this issue in NASIS '''
+##
+##        arcpy.env.workspace = pedonFGDB
+##
+##        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
+##        validTables = arcpy.ListTables("*")
+##        validTables.append('pedon')
+##
+##        for table in validTables:
+##
+##            # Skip any Metadata files
+##            if table.find('Metadata') > -1: continue
+##
+##            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+##            numOfValidFlds = 0
+##
+##            for field in numOfFields:
+##                if not field.type.lower() in ("oid","geometry"):
+##                    numOfValidFlds +=1
+##
+##            # Add 2 more fields to the pedon table for X,Y
+##            if table == 'pedon':
+##                numOfValidFlds += 2
+##
+##            tableFldDict[table] = numOfValidFlds
+##            del numOfFields;numOfValidFlds
 
         """----------------------------------- Open a network object --------------------------------"""
         ''' Open a network object using the URL with the search string already concatenated.
@@ -1328,7 +1374,7 @@ def getPedonHorizon(pedonList):
 
                 # Check if the table name exists in the list of dictionaries
                 # if so, set the currentTable variable and bHeader
-                if pedonGDBtables.has_key(theTable):
+                if pedonGDBtablesDict.has_key(theTable):
                     currentTable = theTable
                     bHeader = True  ## Next line will be the header
 
@@ -1360,7 +1406,7 @@ def getPedonHorizon(pedonList):
 
                     # This value completed the previous value
                     if len(partialValue.split('|')) == numOfFields:
-                        pedonGDBtables[currentTable].append(partialValue)
+                        pedonGDBtablesDict[currentTable].append(partialValue)
                         validRecord += 1
                         bPartialValue = False
                         partialValue,originalValue = "",""
@@ -1398,7 +1444,7 @@ def getPedonHorizon(pedonList):
                         bPartialValue = True
 
                 else:
-                    pedonGDBtables[currentTable].append(theValue)
+                    pedonGDBtablesDict[currentTable].append(theValue)
                     validRecord += 1
                     bPartialValue = False
                     partialValue = ""
@@ -1458,9 +1504,9 @@ def getPedonHorizon(pedonList):
 
 ## ================================================================================================================
 def importPedonData(tblAliases,verbose=False):
-    """ This function will purge the contents from the pedonGDBtables dictionary which contains all of the pedon
+    """ This function will purge the contents from the pedonGDBtablesDict dictionary which contains all of the pedon
         data into the pedon FGDB.  Depending on the number of pedons in the user's AOI, this function will be
-        used multiple times.  The pedonGDBtables dictionary could possilbly allocate all of the computer's
+        used multiple times.  The pedonGDBtablesDict dictionary could possilbly allocate all of the computer's
         memory so a fail-save was built in to make sure a memory exception error wasn't encountered.  This
         function is invoked when approximately 40,000 pedons have been retrieved from the server and stored in \
         memory."""
@@ -1482,7 +1528,7 @@ def importPedonData(tblAliases,verbose=False):
 
         else:
             maxCharTable = max([len(table) for table in tblKeys]) + 1
-            tblKeys = pedonGDBtables.keys()
+            tblKeys = pedonGDBtablesDict.keys()
 
         tblKeys.sort()
 
@@ -1504,7 +1550,7 @@ def importPedonData(tblAliases,verbose=False):
             firstTab = (maxCharTable - len(table)) * " "
 
             # check if list contains records to be added
-            if len(pedonGDBtables[table]):
+            if len(pedonGDBtablesDict[table]):
 
                 numOfRowsAdded = 0
                 GDBtable = pedonFGDB + os.sep + table # FGDB Pyhsical table path
@@ -1549,7 +1595,7 @@ def importPedonData(tblAliases,verbose=False):
 
 
                 """ -------------------------------- Insert Rows ------------------------------------------
-                    Iterate through every value from a specific table in the pedonGDBtables dictary
+                    Iterate through every value from a specific table in the pedonGDBtablesDict dictary
                     and add it to the appropriate FGDB table  Truncate the value if it exceeds the
                     max number of characters.  Set the value to 'None' if it is an empty string."""
 
@@ -1558,7 +1604,7 @@ def importPedonData(tblAliases,verbose=False):
                 recNum = 0
 
                 # '"S1962WI025001","43","15","9","North","89","7","56","West",,"Dane County, Wisconsin. 100 yards south of road."'
-                for rec in pedonGDBtables[table]:
+                for rec in pedonGDBtablesDict[table]:
 
                     newRow = list()  # list containing the values that will populate a new row
                     fldNo = 0        # list position to reference the field lengths in order to compare
@@ -1838,37 +1884,20 @@ if __name__ == '__main__':
             bAliasName = False
 
         """ ------------------------------------------------------Create dictionary with all of the NASIS 7.3 tables  -------------------------------------------------------------------
-            Create a new dictionary called pedonGDBtables that will contain every table in the newly created
+            Create a new dictionary called pedonGDBtablesDict that will contain every table in the newly created
             pedonFGDB above as a key.  Individual records of tables will be added as values to the table keys.
             These values will be in the form of lists.  This dictionary will be populated using the results of
             the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report.  Much faster than opening and closing cursors."""
 
-        pedonGDBtables = createEmptyDictOfTables()
+        pedonGDBtablesDict = createEmptyDictOfTables()
 
-##        """ --------------------------------------------------- Create a dictionary of number of fields per table -----------------------------------------------------------------------
-##            Create a dictionary that will contain table:number of fields in order
-##            to double check that the values from the web report are correct
-##            this was added b/c there were text fields that were getting disconnected in the report
-##            and being read as 2 lines -- Jason couldn't address this issue in NASIS """
-##
-##        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
-##        validTables = arcpy.ListTables("*")
-##        validTables.append('pedon')
-##
-##        for table in validTables:
-##
-##            # Skip any Metadata files
-##            if table.find('Metadata') > -1: continue
-##
-##            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
-##            numOfValidFlds = 0
-##
-##            for field in numOfFields:
-##                if not field.type.lower() in ("oid","geometry"):
-##                    numOfValidFlds +=1
-##
-##            tableFldDict[table] = numOfValidFlds
-##            del numOfFields;numOfValidFlds
+        """ --------------------------------------------------- Create a dictionary of number of fields per table -----------------------------------------------------------------------
+            Create a dictionary that will contain table:number of fields in order
+            to double check that the values from the web report are correct
+            this was added b/c there were text fields that were getting disconnected in the report
+            and being read as 2 lines -- Jason couldn't address this issue in NASIS """
+
+        tableFldDict = createTableFieldLookuup()
 
         """ ------------------------------------------ Get Site, Pedon, and Pedon Horizon information from NASIS -------------------------------------------------------------------------
         ----------------------------------------------- Uses the 'WEB_AnalysisPC_MAIN_URL_EXPORT' NASIS report ---------------------------------------------------------------------------
@@ -1911,25 +1940,25 @@ if __name__ == '__main__':
                 badStrings += pedonString
                 k-=numOfPedonsInPedonString
 
-            #AddMsgAndPrint("\t\tCurrent Size of pedonGDBtables dictionary: " + getObjectSize(pedonGDBtables, verbose=False),0)
+            #AddMsgAndPrint("\t\tCurrent Size of pedonGDBtablesDict dictionary: " + getObjectSize(pedonGDBtablesDict, verbose=False),0)
 
             """ Import pedons from memory to the FGDB after about 40000 pedons have been requested to avoid Memory Errors"""
             if j > 40000  or i == numOfPedonStrings:
 
                 # Only print if number of pedons exceed 40,000
                 if not i == numOfPedonStrings:
-                    AddMsgAndPrint("\n\tUnloading pedon data into FGDB to avoid memory issues. Current size: " + str(getObjectSize(pedonGDBtables, verbose=False)) + " -- Number of Pedons: " + splitThousands(j) ,1)
+                    AddMsgAndPrint("\n\tUnloading pedon data into FGDB to avoid memory issues. Current size: " + str(getObjectSize(pedonGDBtablesDict, verbose=False)) + " -- Number of Pedons: " + splitThousands(j) ,1)
 
                 # Import Pedon Information into Pedon FGDB
-                if len(pedonGDBtables['pedon']):
+                if len(pedonGDBtablesDict['pedon']):
                     if not importPedonData(tblAliases,verbose=(True if i==numOfPedonStrings else False)):
                         exit()
 
-                    del pedonGDBtables
+                    del pedonGDBtablesDict
 
-                    # recreate pedonGDBtables dictionary only if the requests are not done
+                    # recreate pedonGDBtablesDict dictionary only if the requests are not done
                     if not i == numOfPedonStrings:
-                        pedonGDBtables = createEmptyDictOfTables()
+                        pedonGDBtablesDict = createEmptyDictOfTables()
                         j=0
 
             i+=1

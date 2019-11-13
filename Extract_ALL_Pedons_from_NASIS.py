@@ -954,11 +954,13 @@ def getPedonHorizon(pedonList):
             theReport = urlopen(URL).readlines()
         except:
             try:
-                AddMsgAndPrint(tab + "2nd attempt at requesting data")
+                AddMsgAndPrint(tab + "2nd attempt at requesting data - 10 second pause")
+                time.sleep(10)
                 theReport = urlopen(URL).readlines()
             except:
                 try:
-                    AddMsgAndPrint(tab + "3rd attempt at requesting data")
+                    AddMsgAndPrint(tab + "3rd attempt at requesting data - 60 second pause")
+                    time.sleep(60)
                     theReport = urlopen(URL).readlines()
 
                 except URLError, e:
@@ -1566,7 +1568,9 @@ if __name__ == '__main__':
         j = 0                                         # number of Pedons that are in memory;gets reset once dumped into FGDB
         k = 0                                         # number of total pedons that have been requested thus far
 
-        badStrings = list()                           # lists containing lists of pedons that failed
+        badStrings = list()                           # list containing lists of pedons that failed
+        failedAttempts = 0                            # Number of failed attempts to request data. It does NOT account for the
+                                                      # multiple attempts within the getPedonHorizon function.
 
         """ --------- iterate through groups of pedonIDs to retrieve their data ------------ """
         for pedonString in listOfPedonStrings:
@@ -1588,6 +1592,7 @@ if __name__ == '__main__':
                 AddMsgAndPrint("\tFailed to receive pedon horizon info from NASIS",2)
                 badStrings += pedonString
                 k-=numOfPedonsInPedonString
+                failedAttempts+=1
 
             #AddMsgAndPrint("\t\tCurrent Size of pedonGDBtables dictionary: " + getObjectSize(pedonGDBtables, verbose=False),0)
 
