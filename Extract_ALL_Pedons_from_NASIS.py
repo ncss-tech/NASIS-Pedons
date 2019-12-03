@@ -15,10 +15,6 @@
 #-------------------------------------------------------------------------------
 
 ## ===================================================================================
-class ExitError(Exception):
-    pass
-
-## ===================================================================================
 def AddMsgAndPrint(msg, severity=0):
     # prints message to screen if run as a python script
     # Adds tool message to the geoprocessor
@@ -524,6 +520,50 @@ def createEmptyDictOfTables():
         AddMsgAndPrint("\nUnhandled exception (GetTableAliases)\n", 2)
         errorMsg()
         exit()
+
+## ===============================================================================================================
+def createTableFieldLookuup():
+    # This function will create a dictionary that will contain table:number of fields in order
+    # to double check that the values from the web report are correct. This was added b/c there
+    # were text fields that were getting disconnected in the report and being read as 2 lines
+    # and Jason couldn't address this issue in NASIS.  This also serves as a QC against values
+    # have an incorrect number of values relative to the available fields.  This has been a problem
+    # with values having a pipe (|) which causes a problem with splitting values.
+
+    try:
+
+        arcpy.env.workspace = pedonFGDB
+
+        tableInfoDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
+        validTables = arcpy.ListTables("*")
+        validTables.append('pedon')
+
+        for table in validTables:
+
+            # Skip any Metadata files
+            if table.find('Metadata') > -1: continue
+
+            uniqueFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+            numOfValidFlds = 0
+
+            for field in uniqueFields:
+                if not field.type.lower() in ("oid","geometry","FID"):
+                    numOfValidFlds +=1
+
+            # Add 2 more fields to the pedon table for X,Y
+            if table == 'pedon':
+                numOfValidFlds += 2
+
+            tableInfoDict[table] = numOfValidFlds
+            del uniqueFields;numOfValidFlds
+
+        return tableInfoDict
+
+    except:
+        AddMsgAndPrint("\nUnhandled exception (createTableFieldLookup)\n", 2)
+        errorMsg()
+        exit()
+
 ## ===============================================================================================================
 def parsePedonsIntoLists():
     """ This function will parse pedons into manageable chunks that will be sent to the 2nd URL report.
@@ -909,37 +949,6 @@ def getPedonHorizon(pedonList):
         else:
             tab = "\t"
 
-        """ ---------------------- Create a dictionary of number of fields per table -----------------"""
-        ''' Create a dictionary that will contain table:number of fields in order
-            to double check that the values from the web report are correct
-            this was added b/c there were text fields that were getting disconnected in the report
-            and being read as 2 lines -- Jason couldn't address this issue in NASIS '''
-
-        arcpy.env.workspace = pedonFGDB
-
-        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
-        validTables = arcpy.ListTables("*")
-        validTables.append('pedon')
-
-        for table in validTables:
-
-            # Skip any Metadata files
-            if table.find('Metadata') > -1: continue
-
-            nameOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
-            numOfValidFlds = 0
-
-            for field in nameOfFields:
-                if not field.type.lower() in ("oid","geometry"):
-                    numOfValidFlds +=1
-
-            # Add 2 more fields to the pedon table for X,Y
-            if table == 'pedon':
-                numOfValidFlds += 2
-
-            tableFldDict[table] = numOfValidFlds
-            del nameOfFields;numOfValidFlds
-
         """----------------------------------- Open a network object --------------------------------"""
         ''' Open a network object using the URL with the search string already concatenated.
             As soon as the url is opened it needs to be read otherwise there will be a socket
@@ -955,12 +964,12 @@ def getPedonHorizon(pedonList):
         except:
             try:
                 AddMsgAndPrint(tab + "2nd attempt at requesting data - 10 second pause")
-                time.sleep(10)
+                time.sleep(15)
                 theReport = urlopen(URL).readlines()
             except:
                 try:
-                    AddMsgAndPrint(tab + "3rd attempt at requesting data - 60 second pause")
-                    time.sleep(60)
+                    AddMsgAndPrint(tab + "3rd attempt at requesting data - 30 second pause")
+                    time.sleep(30)
                     theReport = urlopen(URL).readlines()
 
                 except URLError, e:
@@ -1549,6 +1558,14 @@ if __name__ == '__main__':
             the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report.  Much faster than opening and closing cursors."""
 
         pedonGDBtables = createEmptyDictOfTables()
+
+        """ --------------------------------------------------- Create a dictionary of number of fields per table -----------------------------------------------------------------------
+            Create a dictionary that will contain table:number of fields in order
+            to double check that the values from the web report are correct
+            this was added b/c there were text fields that were getting disconnected in the report
+            and being read as 2 lines -- Jason couldn't address this issue in NASIS """
+
+        tableFldDict = createTableFieldLookuup()
 
         """ ------------------------------------------ Get Site, Pedon, and Pedon Horizon information from NASIS -------------------------------------------------------------------------
         ----------------------------------------------- Uses the 'WEB_AnalysisPC_MAIN_URL_EXPORT' NASIS report ---------------------------------------------------------------------------

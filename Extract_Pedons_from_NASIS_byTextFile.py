@@ -425,7 +425,51 @@ def createEmptyDictOfTables():
     except:
         AddMsgAndPrint("Unhandled exception (GetTableAliases) \n", 2)
         errorMsg()
-        sys.exit()
+        exit()
+
+## ===============================================================================================================
+def createTableFieldLookuup():
+    # This function will create a dictionary that will contain table:number of fields in order
+    # to double check that the values from the web report are correct. This was added b/c there
+    # were text fields that were getting disconnected in the report and being read as 2 lines
+    # and Jason couldn't address this issue in NASIS.  This also serves as a QC against values
+    # have an incorrect number of values relative to the available fields.  This has been a problem
+    # with values having a pipe (|) which causes a problem with splitting values.
+
+    try:
+
+        arcpy.env.workspace = pedonFGDB
+
+        tableInfoDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
+        validTables = arcpy.ListTables("*")
+        validTables.append('pedon')
+
+        for table in validTables:
+
+            # Skip any Metadata files
+            if table.find('Metadata') > -1: continue
+
+            uniqueFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
+            numOfValidFlds = 0
+
+            for field in uniqueFields:
+                if not field.type.lower() in ("oid","geometry","FID"):
+                    numOfValidFlds +=1
+
+            # Add 2 more fields to the pedon table for X,Y
+            if table == 'pedon':
+                numOfValidFlds += 2
+
+            tableInfoDict[table] = numOfValidFlds
+            del uniqueFields;numOfValidFlds
+
+        return tableInfoDict
+
+    except:
+        AddMsgAndPrint("\nUnhandled exception (createTableFieldLookup)\n", 2)
+        errorMsg()
+        exit()
+
 ## ===============================================================================================================
 def parsePedonsIntoLists():
     """ This function will parse pedons into manageable chunks that will be sent to the 2nd URL report.
@@ -471,7 +515,7 @@ def parsePedonsIntoLists():
 
         if not numOfPedonStrings:
             AddMsgAndPrint("\n\t Something Happened here.....WTF!",2)
-            sys.exit()
+            exit()
 
         else:
             return listOfPedonStrings,numOfPedonStrings
@@ -479,7 +523,7 @@ def parsePedonsIntoLists():
     except:
         AddMsgAndPrint("Unhandled exception (createFGDB)", 2)
         errorMsg()
-        sys.exit()
+        exit()
 
 ## ================================================================================================================
 def getPedonHorizon(pedonList):
@@ -491,37 +535,6 @@ def getPedonHorizon(pedonList):
             tab = "\t\t"
         else:
             tab = "\t"
-
-        """ ---------------------- Create a dictionary of number of fields per table -----------------"""
-        ''' Create a dictionary that will contain table:number of fields in order
-            to double check that the values from the web report are correct
-            this was added b/c there were text fields that were getting disconnected in the report
-            and being read as 2 lines -- Jason couldn't address this issue in NASIS '''
-
-        arcpy.env.workspace = pedonFGDB
-
-        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
-        validTables = arcpy.ListTables("*")
-        validTables.append('pedon')
-
-        for table in validTables:
-
-            # Skip any Metadata files
-            if table.find('Metadata') > -1: continue
-
-            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
-            numOfValidFlds = 0
-
-            for field in numOfFields:
-                if not field.type.lower() in ("oid","geometry"):
-                    numOfValidFlds +=1
-
-            # Add 2 more fields to the pedon table for X,Y
-            if table == 'pedon':
-                numOfValidFlds += 2
-
-            tableFldDict[table] = numOfValidFlds
-            del numOfFields;numOfValidFlds
 
         """----------------------------------- Open a network object --------------------------------"""
         ''' Open a network object using the URL with the search string already concatenated.
@@ -537,11 +550,13 @@ def getPedonHorizon(pedonList):
             theReport = urlopen(URL).readlines()
         except:
             try:
-                AddMsgAndPrint(tab + "2nd attempt at requesting data")
+                AddMsgAndPrint(tab + "2nd attempt at requesting data - 15 second pause")
+                time.sleep(15)
                 theReport = urlopen(URL).readlines()
             except:
                 try:
-                    AddMsgAndPrint(tab + "3rd attempt at requesting data")
+                    AddMsgAndPrint(tab + "3rd attempt at requesting data - 30 second pause")
+                    time.sleep(30)
                     theReport = urlopen(URL).readlines()
                 except:
                     errorMsg()
@@ -1025,7 +1040,7 @@ if __name__ == '__main__':
 
         if not scratchWS:
             AddMsgAndPrint("\n Failed to scratch workspace; Try setting it manually",2)
-            sys.exit()
+            exit()
 
         """ -------------------------------------------------- Get a list of PedonIDs that are within the bounding box from NASIS -----------------------------------------------------------------
             ---------------------------------------------------- Uses the 'WEB_EXPORT_PEDON_BOX_COUNT' NASIS report --------------------------------------------------------------------------"""
@@ -1044,7 +1059,7 @@ if __name__ == '__main__':
 
         if pedonFGDB == "":
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
-            sys.exit()
+            exit()
 
         # Acquire Aliases.  This is only used for printing purposes
         tblAliases = dict()
@@ -1068,24 +1083,7 @@ if __name__ == '__main__':
             this was added b/c there were text fields that were getting disconnected in the report
             and being read as 2 lines -- Jason couldn't address this issue in NASIS """
 
-        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
-        validTables = arcpy.ListTables("*")
-        validTables.append('pedon')
-
-        for table in validTables:
-
-            # Skip any Metadata files
-            if table.find('Metadata') > -1: continue
-
-            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
-            numOfValidFlds = 0
-
-            for field in numOfFields:
-                if not field.type.lower() in ("oid","geometry"):
-                    numOfValidFlds +=1
-
-            tableFldDict[table] = numOfValidFlds
-            del numOfFields;numOfValidFlds
+        tableFldDict = createTableFieldLookuup()
 
         """ ------------------------------------------ Get Site, Pedon, and Pedon Horizon information from NASIS -------------------------------------------------------------------------
         ----------------------------------------------- Uses the 'WEB_AnalysisPC_MAIN_URL_EXPORT' NASIS report ---------------------------------------------------------------------------
@@ -1194,7 +1192,7 @@ if __name__ == '__main__':
 
     except MemoryError:
         AddMsgAndPrint("\n\nOut of Memory Genius! --- " + str(sys.getsizeof(pedonGDBtables)),2)
-        sys.exit()
+        exit()
 
     except:
         errorMsg()

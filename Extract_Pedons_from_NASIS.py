@@ -1290,37 +1290,6 @@ def getPedonHorizon(pedonList):
         else:
             tab = "\t"
 
-##        """ ---------------------- Create a dictionary of number of fields per table -----------------"""
-##        ''' Create a dictionary that will contain table:number of fields in order
-##            to double check that the values from the web report are correct
-##            this was added b/c there were text fields that were getting disconnected in the report
-##            and being read as 2 lines -- Jason couldn't address this issue in NASIS '''
-##
-##        arcpy.env.workspace = pedonFGDB
-##
-##        tableFldDict = dict()    # contains all valid tables and the number of fields that it contains i.e. petext:11
-##        validTables = arcpy.ListTables("*")
-##        validTables.append('pedon')
-##
-##        for table in validTables:
-##
-##            # Skip any Metadata files
-##            if table.find('Metadata') > -1: continue
-##
-##            numOfFields = arcpy.Describe(os.path.join(pedonFGDB,table)).fields
-##            numOfValidFlds = 0
-##
-##            for field in numOfFields:
-##                if not field.type.lower() in ("oid","geometry"):
-##                    numOfValidFlds +=1
-##
-##            # Add 2 more fields to the pedon table for X,Y
-##            if table == 'pedon':
-##                numOfValidFlds += 2
-##
-##            tableFldDict[table] = numOfValidFlds
-##            del numOfFields;numOfValidFlds
-
         """----------------------------------- Open a network object --------------------------------"""
         ''' Open a network object using the URL with the search string already concatenated.
             As soon as the url is opened it needs to be read otherwise there will be a socket
@@ -1335,11 +1304,13 @@ def getPedonHorizon(pedonList):
             theReport = urlopen(URL).readlines()
         except:
             try:
-                AddMsgAndPrint(tab + "2nd attempt at requesting data")
+                AddMsgAndPrint(tab + "2nd attempt at requesting data - 15 second pause")
+                time.sleep(15)
                 theReport = urlopen(URL).readlines()
             except:
                 try:
-                    AddMsgAndPrint(tab + "3rd attempt at requesting data")
+                    AddMsgAndPrint(tab + "3rd attempt at requesting data - 30 second pause")
+                    time.sleep(30)
                     theReport = urlopen(URL).readlines()
                 except:
                     errorMsg()
