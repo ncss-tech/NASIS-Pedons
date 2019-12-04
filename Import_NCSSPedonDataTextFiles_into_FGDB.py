@@ -1,22 +1,27 @@
 #-------------------------------------------------------------------------------
-# Name:        create_FGDB_from_NCSS_Lab_Table.py
-# Purpose:     This script will take in a table that contains the metadata schema,
-#              D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\Metadata_Tables.gdb\NCSS_Lab_Table_Metadata_20191114,
-#              for the NCSS Characterization Data as of 11/15/2019 and create a
-#              FGDB with the corresponding tables and fields.  This schema was
-#              provided by Jason Nemeeck and generated out of Miscrosoft Studio.
+# Name:        Import_NCSSPedonDataTextFiles_into_FGDB
+# Purpose:
 #
-#              Jason originally provided a spreadsheet called Lab_Table_Column_Metadata_20191114.xls
-#              which was converted to a FGDB Table.
+# Author:      Adolfo.Diaz
+#              This tool will import NCSS pedon records from existing text files.
+#              The text files were exported by Jason Nemecek.
+#              The tool will take an existing empty FGDB with the correct schema
+#              produced from the 'create_Schema_from_NCSS_Lab_Table_Metadata.py'
+#              The tool takes in 3 parameters:
+#                  1) directory path of text files
+#                  2) directory where FGDB will be created
+#                  3) Name of FGDB
+#              The tool will error out if there is a discrepancy between the FGDB
+#              schema and the import files.  The names have to match exactly.
+#              There were several temporary adjustments that needed to be made:
+#                  1) Webmap table was manually imported using catalog and not the script
+#                  2) analyte table schemas do not match.
 #
-# Author:      Adolfo.Diaz (Python Script)
-# Author:      Jason Nemecek (NASIS report)
 #
-# Created:     7/27/2018
-# Last Modified: 7/27/2018
-# Copyright:   (c) Adolfo.Diaz 2016
+# Created:     14/11/2019
+# Copyright:   (c) Adolfo.Diaz 2019
+# Licence:     <your licence>
 #-------------------------------------------------------------------------------
-
 
 ## ===================================================================================
 def AddMsgAndPrint(msg, severity=0):
@@ -25,7 +30,7 @@ def AddMsgAndPrint(msg, severity=0):
     #
     #Split the message on \n first, so that if it's multiple lines, a GPMessage will be added for each line
     try:
-        print msg
+        #print msg
 
         #for string in msg.split('\n'):
             #Add a geoprocessing message (in case this is run as a tool)
@@ -36,7 +41,7 @@ def AddMsgAndPrint(msg, severity=0):
             arcpy.AddWarning(msg)
 
         elif severity == 2:
-            arcpy.AddError(msg)
+            arcpy.AddError("\n" + msg)
 
     except:
         pass
@@ -53,10 +58,10 @@ def errorMsg():
         AddMsgAndPrint("Unhandled error in errorMsg method", 2)
         pass
 
-# ===============================================================================================================
+## ================================================================================================================
 def splitThousands(someNumber):
-# will determine where to put a thousands seperator if one is needed.
-# Input is an integer.  Integer with or without thousands seperator is returned.
+    """ will determine where to put a thousands seperator if one is needed.
+        Input is an integer.  Integer with or without thousands seperator is returned."""
 
     try:
         return re.sub(r'(\d{3})(?=\d)', r'\1,', str(someNumber)[::-1])[::-1]
@@ -65,150 +70,364 @@ def splitThousands(someNumber):
         errorMsg()
         return someNumber
 
-# ===================================================================================
-def FindField(layer,chkField):
-    # Check table or featureclass to see if specified field exists
-    # If fully qualified name is found, return that name; otherwise return ""
-    # Set workspace before calling FindField
+## ================================================================================================================
+def createPedonFGDB():
+    """This Function will create a new File Geodatabase using a pre-established XML workspace
+       schema.  All Tables will be empty and should correspond to incoming text files.
+       Relationships will also be pre-established.
+       Return false if XML workspace document is missing OR an existing FGDB with the user-defined
+       name already exists and cannot be deleted OR an unhandled error is encountered.
+       Return the path to the new Pedon File Geodatabase if everything executes correctly."""
 
     try:
+        AddMsgAndPrint("\nCreating File Geodatabase",0)
+        arcpy.SetProgressorLabel("Creating File Geodatabase")
 
-        if arcpy.Exists(layer):
+        # pedon xml template that contains empty pedon Tables and relationships
+        # schema and will be copied over to the output location
+        pedonXML = os.path.dirname(sys.argv[0]) + os.sep + "Create_NCSSLabDatabase_Schema_XMLWorkspace.xml"
+        localPedonGDB = os.path.dirname(sys.argv[0]) + os.sep + "NCSSLabDatabase_Schema_Template.gdb"
 
-            theDesc = arcpy.Describe(layer)
-            theFields = theDesc.fields
-            theField = theFields[0]
-
-            for theField in theFields:
-
-                # Parses a fully qualified field name into its components (database, owner name, table name, and field name)
-                parseList = arcpy.ParseFieldName(theField.name) # (null), (null), (null), MUKEY
-
-                # choose the last component which would be the field name
-                theFieldname = parseList.split(",")[len(parseList.split(','))-1].strip()  # MUKEY
-
-                if theFieldname.upper() == chkField.upper():
-                    return theField.name
-
+        # Return false if pedon fGDB template is not found
+        if not arcpy.Exists(localPedonGDB):
+            AddMsgAndPrint("\t" + os.path.basename(localPedonGDB) + " FGDB template was not found!",2)
             return False
 
-        else:
-            AddMsgAndPrint("\tInput layer not found", 0)
-            return False
+        newPedonFGDB = os.path.join(outputFolder,GDBname + ".gdb")
+
+        if arcpy.Exists(newPedonFGDB):
+            try:
+                arcpy.Delete_management(newPedonFGDB)
+                arcpy.RefreshCatalog(outputFolder)
+                AddMsgAndPrint("\t" + GDBname + ".gdb already exists. Deleting and re-creating FGDB\n",1)
+            except:
+                AddMsgAndPrint("\t" + GDBname + ".gdb already exists. Failed to delete\n",2)
+                return False
+
+        # copy template over to new location
+        AddMsgAndPrint("\tCreating " + GDBname + ".gdb with NCSS Characterization Data V.XXXXX")
+        arcpy.Copy_management(localPedonGDB,newPedonFGDB)
+
+        """ ------------------------------ Code to use XML Workspace -------------------------------------------"""
+##        # Return false if xml file is not found
+##        if not arcpy.Exists(pedonXML):
+##            AddMsgAndPrint("\t" + os.path.basename(pedonXML) + " Workspace document was not found!",2)
+##            return False
+##
+##        # Create empty temp File Geodatabae
+##        arcpy.CreateFileGDB_management(outputFolder,os.path.splitext(os.path.basename(newPedonFGDB))[0])
+##
+##        # set the pedon schema on the newly created temp Pedon FGDB
+##        AddMsgAndPrint("\tImporting NCSS Pedon Schema 7.3 into " + GDBname + ".gdb")
+##        arcpy.ImportXMLWorkspaceDocument_management(newPedonFGDB, pedonXML, "DATA", "DEFAULTS")
+
+        arcpy.UncompressFileGeodatabaseData_management(newPedonFGDB)
+        arcpy.RefreshCatalog(outputFolder)
+        AddMsgAndPrint("\tSuccessfully created: " + GDBname + ".gdb")
+
+        return newPedonFGDB
+
+    except arcpy.ExecuteError:
+        AddMsgAndPrint(arcpy.GetMessages(2),2)
+        return False
 
     except:
+        AddMsgAndPrint("Unhandled exception (createFGDB)", 2)
         errorMsg()
         return False
 
-# =========================================================== Main Body =============================================================================
+## ================================================================================================================
+def importTabularData():
+    """ This function will import the SSURGO .txt files from the tabular folder.
+        tabularFolder is the absolute path to the tabular folder.
+        tblAliases is a list of the physical name of the .txt file along with the Alias name.
+        Return False if error occurs, true otherwise.  there is a list of files that will not be
+        imported under "doNotImport".  If the tabular folder is empty or there are no text files
+        the survey will be skipped."""
+
+    try:
+        env.workspace = pedonFGDB
+
+        #AddMsgAndPrint("\n\tImporting Tabular Data for: " + SSA,0)
+
+        # For each item in sorted keys
+        for GDBtable in pedonFGDBTables:
+
+            #if GDBtable != 'layer':continue
+            #if GDBtable == 'analyte':continue
+
+            # Absolute path to text file
+            txtPath = os.path.join(textFilePath,GDBtable + ".txt")
+
+            AddMsgAndPrint("\nImporting Tabular Data for: " + GDBtable,0)
+
+            if os.path.exists(txtPath):
+
+                # Continue if the text file contains values. Not Empty file
+                if os.path.getsize(txtPath) > 0:
+
+                    # Put all the field names in a list; used to initiate insertCursor object
+                    fieldList = arcpy.Describe(GDBtable).fields
+                    nameOfFields = []
+                    fldLengths = list()
+
+                    for field in fieldList:
+
+                        # record is a LAB pedon. Addd XY token to list
+                        if GDBtable == pedonFC and field == 'Shape':
+
+                            # Pedon feature class will have X,Y geometry added; Add XY token to list
+                            nameOfFields.append('SHAPE@XY')
+                            fldLengths.append(0)  # X coord
+                            fldLengths.append(0)  # Y coord
+                            continue
+
+                        if field.type != "OID":
+                            nameOfFields.append(field.name)
+                            if field.type.lower() == "string":
+                                fldLengths.append(field.length)
+                            else:
+                                fldLengths.append(0)
+
+                    del fieldList, field
+                    #print "------------------- Number of fields: " + str(len(nameOfFields))
+                    #print nameOfFields
+
+                    # The csv file might contain very huge fields, therefore increase the field_size_limit:
+                    # Exception thrown with IL177 in legend.txt.  Not sure why, only 1 record was present
+                    try:
+                        csv.field_size_limit(sys.maxsize)
+                    except:
+                        csv.field_size_limit(sys.maxint)
+
+                    # Number of records in the SSURGO text file
+                    textFileRecords = sum(1 for row in csv.reader(open(txtPath, 'rb'), delimiter='|', quotechar='"'))
+
+                    # Initiate Cursor to add rows
+                    cursor = arcpy.da.InsertCursor(GDBtable,nameOfFields)
+
+                    # counter for number of records successfully added; used for reporting
+                    numOfRowsAdded = 0
+                    reader = csv.reader(open(txtPath, 'rb'), delimiter='|', quotechar='"')
+
+                    # Strictly for headers
+                    i = 1
+                    headerRow = ""
+
+                    try:
+                        # Return a reader object which will iterate over lines in txtPath
+                        for rowInFile in reader:
+
+                            # Skip first record if text files contain headers
+                            if fileContainHeaders and i==1:
+                               i+=1
+                               headerRow = rowInFile
+                               continue
+
+                            # This is strictly temporary bc the 'combine_nasis_ncss' txt
+                            # file containes duplicate sets of records
+                            if GDBtable == pedonFC:
+                               if rowInFile == headerRow:
+                                  print "Duplicate records start"
+                                  break
+
+                            """ Cannot use this snippet of code b/c some values have exceeded their field lengths; need to truncate"""
+                            # replace all blank values with 'None' so that the values are properly inserted
+                            # into integer values otherwise insertRow fails
+                            # newRow = [None if value =='' else value for value in rowInFile]
+
+                            newRow = list()  # list containing the values that make up a specific row
+                            fldNo = 0        # list position to reference the field lengths in order to compare
+
+                            for value in rowInFile:
+                                fldLen = fldLengths[fldNo]
+
+                                if value == '':
+                                    value = None
+
+                                elif fldLen > 0:
+                                    value = value[0:fldLen]
+
+                                if value != None and value.startswith(" "):
+                                    value = value[1:len(value)]
+
+                                # There were issues with values containing non-ASCII characters.
+                                # Substitute non-ASCII characters with spaces.
+                                if value != None:
+                                    try:
+                                        value.encode('utf-8')
+                                    except:
+                                        value = re.sub(r'[^\x00-\x7F]+',' ', value)
+
+                                newRow.append(value)
+                                fldNo += 1
+
+                            # Add XY coordinates to the pedon point feature class.
+                            if GDBtable == pedonFC:
+                                try:
+                                    xValue = float(newRow[66])  # Long
+                                    yValue = float(newRow[65])  # Lat
+                                except:
+                                    xValue = 0.00
+                                    yValue = 90.0
+
+                                newRow.insert(nameOfFields.index('Shape'),(xValue,yValue))
+                                del xValue,yValue
+
+                            cursor.insertRow(newRow)
+                            numOfRowsAdded += 1
+
+                            del newRow, rowInFile
+
+                    except:
+                        AddMsgAndPrint("\n\t\tError inserting record in table: " + GDBtable,2)
+                        AddMsgAndPrint("\t\t\tRecord # " + str(numOfRowsAdded + 1),2)
+                        AddMsgAndPrint("\t\t\tValue: " + str(newRow),2)
+                        AddMsgAndPrint("\t\t\t-------------------------")
+                        AddMsgAndPrint("\t\t\tOrig: " + str(rowInFile))
+                        AddMsgAndPrint("\t\t\tField Number: " + str(fldNo))
+                        errorMsg();exit()
+                        continue
+
+                    del cursor
+
+                    #AddMsgAndPrint("\t\t--> " + iefileName + theAlias + theRecLength + " Records Added: " + str(splitThousands(numOfRowsAdded)),0)
+                    AddMsgAndPrint("\t\t--> " + GDBtable + ": Records Added: " + str(splitThousands(numOfRowsAdded)),0)
+
+                    # Add the header row to the number of rows added.
+                    if fileContainHeaders: numOfRowsAdded+=1
+
+                    # compare the # of rows inserted with the number of valid rows in the text file.
+                    if numOfRowsAdded != textFileRecords:
+                        AddMsgAndPrint("\t\t\t Incorrect # of records inserted into: " + GDBtable, 2 )
+                        AddMsgAndPrint("\t\t\t\t TextFile records: " + str(splitThousands(textFileRecords)),2)
+                        AddMsgAndPrint("\t\t\t\t Records Inserted: " + str(splitThousands(numOfRowsAdded)),2)
+
+                else:
+                    AddMsgAndPrint("\t\t--> " + GDBtable + ": Records Added: 0",0)
+
+            else:
+                AddMsgAndPrint("\t\t--> " + GDBtable + ".txt does NOT exist.....SKIPPING ",2)
+
+            arcpy.SetProgressorPosition()
+
+        # Resets the progressor back to is initial state
+        arcpy.ResetProgressor()
+        arcpy.SetProgressorLabel(" ")
+
+        return True
+
+    except arcpy.ExecuteError:
+        AddMsgAndPrint(arcpy.GetMessages(2),2)
+        AddMsgAndPrint("\tImporting Tabular Data Failed for: " + GDBtable,2)
+        return False
+
+    except csv.Error, e:
+        AddMsgAndPrint('\nfile %s, line %d: %s' % (txtPath, reader.line_num, e))
+        AddMsgAndPrint("\tImporting Tabular Data Failed for: " + GDBtable,2)
+        errorMsg()
+        return False
+
+    except IOError as (errno, strerror):
+        AddMsgAndPrint("\nI/O error({0}): {1}".format(errno, strerror) + " File: " + txtPath + "\n",2)
+        AddMsgAndPrint("\tImporting Tabular Data Failed for: " + GDBtable,2)
+        errorMsg()
+        return False
+
+    except:
+        AddMsgAndPrint("\nUnhandled exception (importTabularData) \n", 2)
+        AddMsgAndPrint("\tImporting Tabular Data Failed for: " + GDBtable,2)
+        errorMsg()
+        return False
+
+
+
+# =========================================== Main Body ==========================================
 # Import modules
-import sys, string, os, traceback, urllib, re, arcpy
+import sys, string, os, traceback, re, arcpy, time, csv
 from arcpy import env
+from sys import getsizeof, stderr
+from itertools import chain
+from collections import deque
 
 if __name__ == '__main__':
 
     try:
 
-        schemaTable = r'D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\Metadata_Tables.gdb\NCSS_Lab_Table_Metadata_20191114'
+        textFilePath = arcpy.GetParameter(0)
+        outputFolder = arcpy.GetParameterAsText(1)
+        GDBname = arcpy.GetParameterAsText(1)
 
-        pedonGDB = r'D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\NCSSLabDatabase_Schema_Template.gdb'
+        textFilePath = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_LabData_export'
+        outputFolder = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019'
+        GDBname = 'NCSS_Characterization_Database_newSchema2.gdb'
 
-        """ --------------------------------- Collect schema tables and fields -------------------------"""
-        tableName = 1
-        fieldName = 2
-        fieldSequence = 3
-        fieldType = 4
-        fieldSize = 5
-        fieldNull = 9
-        tableAlias = tableName
-        fieldAlias = fieldName
+        pedonFC = 'combine_nasis_ncss'     # name of FC that contains the Lat,Long and will be afeature class
 
-        #tableAlias = 3
-        #fieldAlias = 7
-        #fieldPhysicalType = 9
+        # Boolean indicating input text files have headers to skip
+        fileContainHeaders = True
 
-        arcpy.env.workspace = pedonGDB
-        currentTable = ""
+        # Step 1 - Create List of .txt files
+        textFileList = [file.replace('.txt','') for file in os.listdir(textFilePath) if file.endswith('.txt')]
 
-        tblPhysicalNameFld = 'Table_Name'     # name of field containing Physical Name of Table from the schema table
-        pedonTable = 'combine_nasis_ncss'     # name of table that contains the Lat,Long and will be afeature class
-        fieldSequenceFld = 'OrdinalPosition'
-        currentTableFieldNames = list()
+        # Step 2 - Create FGDB
+        """ ------------------------------------------------------Create New File Geodatabaes and get Table Aliases for printing -------------------------------------------------------------------
+        Create a new FGDB using a pre-established XML workspace schema.  All tables will be empty
+        and relationships established.  A dictionary of empty lists will be created as a placeholder
+        for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
-        for row in arcpy.da.SearchCursor(schemaTable,'*',sql_clause=(None, 'ORDER BY ' + tblPhysicalNameFld + ',' + fieldSequenceFld)):
-            # --------------------------------------------------- Table does NOT EXIST - Create Table
-            if not currentTable == row[tableName]:
-                currentTable = row[tableName]
+        pedonFGDB = createPedonFGDB()
+        #pedonFGDB = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_Characterization_Database_newSchema.gdb'
+        arcpy.env.workspace = pedonFGDB
 
-                # Table does exist; capture fields to compare to master list
-                if arcpy.Exists(os.path.join(pedonGDB,currentTable)):
-                    currentTableFieldNames = [field.name for field in arcpy.ListFields(os.path.join(pedonGDB,currentTable))]
-                    AddMsgAndPrint("\n" + currentTable + " - " + row[tableAlias] + ": Already Exists!")
+        if not pedonFGDB:
+            AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
+            exit()
 
-                # Create feature class for pedons
-                elif currentTable == pedonTable:
+        # Step 3 - Compare names of text files to tables in FGDB
+        pedonFGDBTables = arcpy.ListTables("*")
+        for fcs in arcpy.ListFeatureClasses('*'):
+            pedonFGDBTables.append(fcs)
 
-                    AddMsgAndPrint("\nCreating Feature Class: " + currentTable + " - " + row[tableAlias])
+        discrepancy = list(set(pedonFGDBTables) - set(textFileList))
 
-                    # factory code for GCS WGS84 spatial reference
-                    spatialRef = arcpy.SpatialReference(4326)
-                    arcpy.CreateFeatureclass_management(pedonGDB, pedonTable, "POINT", "#", "DISABLED", "DISABLED", spatialRef)
+        if len(discrepancy) > 0:
+           AddMsgAndPrint("\nThere are " + str(len(discrepancy)) + " discrepancies between the FGDB and text files",2)
+           for item in discrepancy:
+               if item in pedonFGDBTables:
+                  AddMsgAndPrint("\t\"" + item + "\" Table does not have a corresponding text file")
+               else:
+                  AddMsgAndPrint("\t\"" + item + "\" text file does not have a corresponding FGDB Table")
+           AddMsgAndPrint("\nAll discrepancies must be addressed before continuing.....EXITING!")
+           #exit()
 
-                # Table doesn't exist; Create table
-                else:
-                    AddMsgAndPrint("\nCreating Table: " + currentTable + " - " + row[tableAlias])
-                    arcpy.CreateTable_management(pedonGDB, currentTable)
-
-                # Add Alias Name to new table or feature class
-                arcpy.AlterAliasName(pedonGDB + os.sep + currentTable, row[tableAlias])
-
-            # --------------------------------------------------- Add fields to new table; check fields
-            #print('\tAdding field: {0} - {1} - {2} - {3} - {4}'.format(row[fieldName], row[fieldAlias], row[fieldType], row[fieldSize], row[fieldSequence]))
-
-            if row[fieldName] in currentTableFieldNames:
-               AddMsgAndPrint('\tfield: {0} - {1}'.format(row[fieldName], row[fieldAlias]) + ' already exists')
-               continue
-
-            else:
-                 AddMsgAndPrint('\tAdding field: {0} - {1}'.format(row[fieldName], row[fieldAlias]))
-                 arcFieldLength = '#'
-
-            if row[fieldType].lower() in ('bit', 'boolean', 'choice', 'file reference', 'hyperlink', 'narrative text', 'varchar', 'nvarchar', 'string', 'uniqueidentifier'):
-                arcFieldType = 'TEXT'
-                arcFieldLength = row[fieldSize]
-
-                # Adjust for missing field lengths
-                try:
-                    int(arcFieldLength)
-                except:
-                    if row[fieldType].lower() == 'bit':
-                        arcFieldLength = 5
-                    else:
-                        arcFieldLength = 100
-
-            elif row[fieldType].lower() in ('date/time', 'datetime'):
-                arcFieldType = 'DATE'
-            elif row[fieldType].lower() in ('decimal', 'float', 'real'):
-                arcFieldType = 'FLOAT'
-            elif row[fieldType].lower() in ('int', 'integer', 'numeric', 'smallint','tinyint'):
-                arcFieldType = 'LONG'
-            elif row[fieldType].lower() in ('smallint','tinyint'):
-                arcFieldType = 'SHORT'
-            else:
-                AddMsgAndPrint("\t\t" + row[fieldType] + " was not accounted for. Defaulting to 'TEXT'",1)
-                arcFieldType = 'TEXT'
-
-            # ---------------------------------------------- Determine NULLABLE
-            if row[fieldNull] in ('None', 'NoneType','', None):
-                arcFieldNull = 'NULLABLE'
-            elif row[fieldNull].lower() in ('no'):
-                arcFieldNull = 'NULLABLE'
-            elif row[fieldNull].lower() in ('not null', 'none'):
-                arcFieldNull = 'NON_NULLABLE'
+        importTabularData()
 
 
-            arcpy.AddField_management(currentTable, row[fieldName], arcFieldType, '#', '#', arcFieldLength, row[fieldAlias], arcFieldNull, 'REQUIRED', '#')
 
+    except MemoryError:
+        AddMsgAndPrint("\n\nOut of Memory Genius! --- " + str(sys.getsizeof(pedonGDBtables)),2)
+        exit()
 
     except:
         errorMsg()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
