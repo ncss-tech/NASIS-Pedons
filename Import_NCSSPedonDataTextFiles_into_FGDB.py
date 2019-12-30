@@ -146,15 +146,14 @@ def importTabularData():
         the survey will be skipped."""
 
     try:
-        env.workspace = pedonFGDB
-
-        #AddMsgAndPrint("\n\tImporting Tabular Data for: " + SSA,0)
+        arcpy.env.workspace = pedonFGDB
 
         # For each item in sorted keys
         for GDBtable in pedonFGDBTables:
 
-            #if GDBtable != 'layer':continue
-            #if GDBtable == 'analyte':continue
+            #if GDBtable != 'lab_method_code':continue
+            if GDBtable != 'lab_chemical_properties':continue
+            #if not GDBtable in ('lab_webmap'):continue
 
             # Absolute path to text file
             txtPath = os.path.join(textFilePath,GDBtable + ".txt")
@@ -226,10 +225,15 @@ def importTabularData():
 
                             # This is strictly temporary bc the 'combine_nasis_ncss' txt
                             # file containes duplicate sets of records
-                            if GDBtable == pedonFC:
-                               if rowInFile == headerRow:
-                                  print "Duplicate records start"
-                                  break
+                            if GDBtable in (pedonFC,'lab_chemical_properties'):
+                               try:
+                                   if rowInFile == headerRow:
+                                      print "Duplicate records found ---- Ending"
+                                      break
+                               except:
+                                   print rowInFile
+                                   print headerRow
+                                   exit()
 
                             """ Cannot use this snippet of code b/c some values have exceeded their field lengths; need to truncate"""
                             # replace all blank values with 'None' so that the values are properly inserted
@@ -242,7 +246,7 @@ def importTabularData():
                             for value in rowInFile:
                                 fldLen = fldLengths[fldNo]
 
-                                if value == '':
+                                if value == '' or value == 'NULL':
                                     value = None
 
                                 elif fldLen > 0:
@@ -253,11 +257,16 @@ def importTabularData():
 
                                 # There were issues with values containing non-ASCII characters.
                                 # Substitute non-ASCII characters with spaces.
-                                if value != None:
-                                    try:
-                                        value.encode('utf-8')
-                                    except:
-                                        value = re.sub(r'[^\x00-\x7F]+',' ', value)
+                                # revision - replace "?" with beta
+##                                if value != None:
+##                                    try:
+##                                        value.encode('utf-8')
+##                                    except:
+##                                        AddMsgAndPrint("--- Non Ascii = " + value)
+##                                        try:
+##                                            value = value.decode('utf-8').replace("?".decode('utf-8'), "beta").encode('utf-8')
+##                                        except:
+##                                            value = re.sub(r'[^\x00-\x7F]+','', value)
 
                                 newRow.append(value)
                                 fldNo += 1
@@ -280,13 +289,14 @@ def importTabularData():
                             del newRow, rowInFile
 
                     except:
+                        errorMsg()
                         AddMsgAndPrint("\n\t\tError inserting record in table: " + GDBtable,2)
                         AddMsgAndPrint("\t\t\tRecord # " + str(numOfRowsAdded + 1),2)
                         AddMsgAndPrint("\t\t\tValue: " + str(newRow),2)
                         AddMsgAndPrint("\t\t\t-------------------------")
                         AddMsgAndPrint("\t\t\tOrig: " + str(rowInFile))
                         AddMsgAndPrint("\t\t\tField Number: " + str(fldNo))
-                        errorMsg();exit()
+                        errorMsg()
                         continue
 
                     del cursor
@@ -360,7 +370,7 @@ if __name__ == '__main__':
 
         textFilePath = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_LabData_export'
         outputFolder = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019'
-        GDBname = 'NCSS_Characterization_Database_newSchema2.gdb'
+        GDBname = 'NCSS_Characterization_Database_newSchema2'
 
         pedonFC = 'combine_nasis_ncss'     # name of FC that contains the Lat,Long and will be afeature class
 
@@ -376,8 +386,8 @@ if __name__ == '__main__':
         and relationships established.  A dictionary of empty lists will be created as a placeholder
         for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
-        pedonFGDB = createPedonFGDB()
-        #pedonFGDB = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_Characterization_Database_newSchema.gdb'
+        #pedonFGDB = createPedonFGDB()
+        pedonFGDB = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_Characterization_Database_newSchema2.gdb'
         arcpy.env.workspace = pedonFGDB
 
         if not pedonFGDB:
@@ -398,12 +408,10 @@ if __name__ == '__main__':
                   AddMsgAndPrint("\t\"" + item + "\" Table does not have a corresponding text file")
                else:
                   AddMsgAndPrint("\t\"" + item + "\" text file does not have a corresponding FGDB Table")
-           AddMsgAndPrint("\nAll discrepancies must be addressed before continuing.....EXITING!")
-           #exit()
+           AddMsgAndPrint("\nAll discrepancies must be addressed before continuing.....EXITING!",1)
+           exit()
 
         importTabularData()
-
-
 
     except MemoryError:
         AddMsgAndPrint("\n\nOut of Memory Genius! --- " + str(sys.getsizeof(pedonGDBtables)),2)
@@ -411,23 +419,3 @@ if __name__ == '__main__':
 
     except:
         errorMsg()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -146,13 +146,18 @@ if __name__ == '__main__':
 
         for row in arcpy.da.SearchCursor(schemaTable,'*',sql_clause=(None, 'ORDER BY ' + tblPhysicalNameFld + ',' + fieldSequenceFld)):
             # --------------------------------------------------- Table does NOT EXIST - Create Table
+            if row[tableName] == 'analyte':continue
+
             if not currentTable == row[tableName]:
                 currentTable = row[tableName]
 
                 # Table does exist; capture fields to compare to master list
                 if arcpy.Exists(os.path.join(pedonGDB,currentTable)):
                     currentTableFieldNames = [field.name for field in arcpy.ListFields(os.path.join(pedonGDB,currentTable))]
-                    AddMsgAndPrint("\n" + currentTable + " - " + row[tableAlias] + ": Already Exists!")
+                    tblAlias = currentTable.replace('_',' ').title()
+                    arcpy.AlterAliasName(currentTable,tblAlias)
+                    #AddMsgAndPrint("\n" + currentTable + " - " + row[tableAlias] + ": Already Exists!")
+                    AddMsgAndPrint("\n" + currentTable + " - " + tblAlias + ": Already Exists!")
 
                 # Create feature class for pedons
                 elif currentTable == pedonTable:
@@ -175,11 +180,17 @@ if __name__ == '__main__':
             #print('\tAdding field: {0} - {1} - {2} - {3} - {4}'.format(row[fieldName], row[fieldAlias], row[fieldType], row[fieldSize], row[fieldSequence]))
 
             if row[fieldName] in currentTableFieldNames:
-               AddMsgAndPrint('\tfield: {0} - {1}'.format(row[fieldName], row[fieldAlias]) + ' already exists')
+               newFieldAlias =  (row[fieldName]).replace('_',' ')
+               try:
+                   arcpy.AlterField_management(currentTable,row[fieldName],'#',newFieldAlias)
+                   AddMsgAndPrint('\tfield: {0} - {1}'.format(row[fieldName], newFieldAlias) + ' already exists')
+               except:
+                   AddMsgAndPrint('\tfield: {0} - {1}'.format(row[fieldName], newFieldAlias) + ' already exists')
+               #AddMsgAndPrint('\tfield: {0} - {1}'.format(row[fieldName], row[fieldAlias]) + ' already exists')
                continue
 
             else:
-                 AddMsgAndPrint('\tAdding field: {0} - {1}'.format(row[fieldName], row[fieldAlias]))
+                 AddMsgAndPrint('\tAdding field: {0} - {1} - {2} Table'.format(row[fieldName], row[fieldAlias],currentTable))
                  arcFieldLength = '#'
 
             if row[fieldType].lower() in ('bit', 'boolean', 'choice', 'file reference', 'hyperlink', 'narrative text', 'varchar', 'nvarchar', 'string', 'uniqueidentifier'):
@@ -214,7 +225,6 @@ if __name__ == '__main__':
                 arcFieldNull = 'NULLABLE'
             elif row[fieldNull].lower() in ('not null', 'none'):
                 arcFieldNull = 'NON_NULLABLE'
-
 
             arcpy.AddField_management(currentTable, row[fieldName], arcFieldType, '#', '#', arcFieldLength, row[fieldAlias], arcFieldNull, 'REQUIRED', '#')
 
