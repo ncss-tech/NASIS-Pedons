@@ -1055,7 +1055,7 @@ if __name__ == '__main__':
             for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
         pedonFGDB = createPedonFGDB()
-        #pedonFGDB = r'E:\All_Pedons\NASIS_Pedons\NASIS_Pedons_20180505.gdb'
+        #pedonFGDB = r'N:\flex\Dylan\NASIS_Morphological\NASIS_Morphological_20200114.gdb'
 
         if pedonFGDB == "":
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)

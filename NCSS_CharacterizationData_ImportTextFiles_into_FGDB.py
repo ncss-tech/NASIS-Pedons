@@ -1,12 +1,30 @@
 #-------------------------------------------------------------------------------
-# Name:        Import_NCSSPedonDataTextFiles_into_FGDB
+# Name:        NCSS_CharacterizationData_ImportTextFiles_into_FGDB
 # Purpose:
 #
 # Author:      Adolfo.Diaz
-#              This tool will import NCSS pedon records from existing text files.
-#              The text files were exported by Jason Nemecek.
-#              The tool will take an existing empty FGDB with the correct schema
-#              produced from the 'create_Schema_from_NCSS_Lab_Table_Metadata.py'
+#              This tool will import NCSS Soil Characterization pedon records
+#              from existing text files.  These text files were exported by Jason Nemecek.
+#              and include the following 17 pipe delimitted ascii tables:
+#                 - analyte.txt
+#                 - combine_nasis_ncss.txt
+#                 - lab_analysis_prodcedure.txt
+#                 - lab_area.txt
+#                 - lab_calculations_including_estimates_and_default_values.txt
+#                 - lab_chemical_properties.txt
+#                 - lab_major_and_trace_elements_and_oxides.txt
+#                 - lab_method_code.txt
+#                 - lab_mineralogy_glass_count.txt
+#                 - lab_physical_properties.txt
+#                 - lab_webmap.txt
+#                 - lab_xray_and_thermal.txt
+#                 - layer.txt
+#                 - pedon.txt
+#                 - preparation.txt
+#                 - rosetta.txt
+#                 - site.txt
+#              The tool will import the above text files into an existing empty FGDB with
+#              the appropriate tabular schema produced from the 'create_Schema_from_NCSS_Lab_Table_Metadata.py'
 #              The tool takes in 3 parameters:
 #                  1) directory path of text files
 #                  2) directory where FGDB will be created
@@ -151,9 +169,9 @@ def importTabularData():
         # For each item in sorted keys
         for GDBtable in pedonFGDBTables:
 
-            #if GDBtable != 'lab_method_code':continue
-            if GDBtable != 'lab_chemical_properties':continue
-            #if not GDBtable in ('lab_webmap'):continue
+            #if GDBtable != 'lab_area':continue
+            #if GDBtable != 'lab_chemical_properties':continue
+            #if not GDBtable in ('combine_nasis_ncss'):continue
 
             # Absolute path to text file
             txtPath = os.path.join(textFilePath,GDBtable + ".txt")
@@ -202,38 +220,44 @@ def importTabularData():
                     # Number of records in the SSURGO text file
                     textFileRecords = sum(1 for row in csv.reader(open(txtPath, 'rb'), delimiter='|', quotechar='"'))
 
+                    # Subtract header from total records
+                    if fileContainHeaders:
+                       textFileRecords = textFileRecords - 1
+
                     # Initiate Cursor to add rows
                     cursor = arcpy.da.InsertCursor(GDBtable,nameOfFields)
 
                     # counter for number of records successfully added; used for reporting
                     numOfRowsAdded = 0
                     reader = csv.reader(open(txtPath, 'rb'), delimiter='|', quotechar='"')
+                    #reader = csv.reader(codecs.open(txtPath, 'r', encoding='utf-8', errors='ignore'), delimiter='|', quotechar='"')
 
                     # Strictly for headers
-                    i = 1
+                    lineNumber = 0
                     headerRow = ""
+                    unicodeErrors = list()
 
-                    try:
-                        # Return a reader object which will iterate over lines in txtPath
-                        for rowInFile in reader:
+                    # Return a reader object which will iterate over lines in txtPath
+                    for rowInFile in reader:
+                        try:
+                            lineNumber+=1
 
                             # Skip first record if text files contain headers
-                            if fileContainHeaders and i==1:
-                               i+=1
+                            if fileContainHeaders and lineNumber==1:
                                headerRow = rowInFile
                                continue
 
-                            # This is strictly temporary bc the 'combine_nasis_ncss' txt
-                            # file containes duplicate sets of records
-                            if GDBtable in (pedonFC,'lab_chemical_properties'):
-                               try:
-                                   if rowInFile == headerRow:
-                                      print "Duplicate records found ---- Ending"
-                                      break
-                               except:
-                                   print rowInFile
-                                   print headerRow
-                                   exit()
+##                            # This is strictly temporary bc the 'combine_nasis_ncss' txt
+##                            # file containes duplicate sets of records
+##                            if GDBtable in (pedonFC,'lab_chemical_properties'):
+##                               try:
+##                                   if rowInFile == headerRow:
+##                                      print "Duplicate records found ---- Ending"
+##                                      break
+##                               except:
+##                                   print rowInFile
+##                                   print headerRow
+##                                   exit()
 
                             """ Cannot use this snippet of code b/c some values have exceeded their field lengths; need to truncate"""
                             # replace all blank values with 'None' so that the values are properly inserted
@@ -244,6 +268,12 @@ def importTabularData():
                             fldNo = 0        # list position to reference the field lengths in order to compare
 
                             for value in rowInFile:
+
+                                # incoming strings had a variety of non-ascii symbols that could
+                                # not be decoded by utf-8 including the degree symbol and the lower
+                                # case beta.  Had to use the ISO8859 code set.
+                                value = value.decode('ISO8859-1')
+
                                 fldLen = fldLengths[fldNo]
 
                                 if value == '' or value == 'NULL':
@@ -254,19 +284,6 @@ def importTabularData():
 
                                 if value != None and value.startswith(" "):
                                     value = value[1:len(value)]
-
-                                # There were issues with values containing non-ASCII characters.
-                                # Substitute non-ASCII characters with spaces.
-                                # revision - replace "?" with beta
-##                                if value != None:
-##                                    try:
-##                                        value.encode('utf-8')
-##                                    except:
-##                                        AddMsgAndPrint("--- Non Ascii = " + value)
-##                                        try:
-##                                            value = value.decode('utf-8').replace("?".decode('utf-8'), "beta").encode('utf-8')
-##                                        except:
-##                                            value = re.sub(r'[^\x00-\x7F]+','', value)
 
                                 newRow.append(value)
                                 fldNo += 1
@@ -288,30 +305,36 @@ def importTabularData():
 
                             del newRow, rowInFile
 
-                    except:
-                        errorMsg()
-                        AddMsgAndPrint("\n\t\tError inserting record in table: " + GDBtable,2)
-                        AddMsgAndPrint("\t\t\tRecord # " + str(numOfRowsAdded + 1),2)
-                        AddMsgAndPrint("\t\t\tValue: " + str(newRow),2)
-                        AddMsgAndPrint("\t\t\t-------------------------")
-                        AddMsgAndPrint("\t\t\tOrig: " + str(rowInFile))
-                        AddMsgAndPrint("\t\t\tField Number: " + str(fldNo))
-                        errorMsg()
-                        continue
+                        except:
+                            print "Line Error: " + str(lineNumber)
+                            errorMsg()
+##                            exc_type, exc_value, exc_traceback = sys.exc_info()
+##                            theMsg = "\t" + traceback.format_exception(exc_type, exc_value, exc_traceback)[1] + "\n\t" + traceback.format_exception(exc_type, exc_value, exc_traceback)[-1]
+##
+##                            if theMsg.find('codec') > -1:
+##                               unicodeErrors.append((GDBtable,lineNumber,fldNo))
+##                               continue
+##
+##                            else:
+##                                AddMsgAndPrint("\n\t\tError inserting record in table: " + GDBtable,2)
+##                                AddMsgAndPrint("\t\t\tRecord # " + str(lineNumber),2)
+##                                AddMsgAndPrint("\t\t\tValue: " + str(newRow),2)
+##                                AddMsgAndPrint("\t\t\tField Number: " + str(fldNo))
+##                                errorMsg()
+                            continue
 
-                    del cursor
+                    del reader, cursor
 
                     #AddMsgAndPrint("\t\t--> " + iefileName + theAlias + theRecLength + " Records Added: " + str(splitThousands(numOfRowsAdded)),0)
                     AddMsgAndPrint("\t\t--> " + GDBtable + ": Records Added: " + str(splitThousands(numOfRowsAdded)),0)
-
-                    # Add the header row to the number of rows added.
-                    if fileContainHeaders: numOfRowsAdded+=1
 
                     # compare the # of rows inserted with the number of valid rows in the text file.
                     if numOfRowsAdded != textFileRecords:
                         AddMsgAndPrint("\t\t\t Incorrect # of records inserted into: " + GDBtable, 2 )
                         AddMsgAndPrint("\t\t\t\t TextFile records: " + str(splitThousands(textFileRecords)),2)
                         AddMsgAndPrint("\t\t\t\t Records Inserted: " + str(splitThousands(numOfRowsAdded)),2)
+                        AddMsgAndPrint("\t\t\t\t Unicode Errors: " + str(splitThousands(len(unicodeErrors))),2)
+                        AddMsgAndPrint("\n\n" + str(unicodeErrors))
 
                 else:
                     AddMsgAndPrint("\t\t--> " + GDBtable + ": Records Added: 0",0)
@@ -354,7 +377,7 @@ def importTabularData():
 
 # =========================================== Main Body ==========================================
 # Import modules
-import sys, string, os, traceback, re, arcpy, time, csv
+import sys, string, os, traceback, re, arcpy, time, csv, codecs
 from arcpy import env
 from sys import getsizeof, stderr
 from itertools import chain
@@ -386,8 +409,8 @@ if __name__ == '__main__':
         and relationships established.  A dictionary of empty lists will be created as a placeholder
         for the values from the XML report.  The name and quantity of lists will be the same as the FGDB"""
 
-        #pedonFGDB = createPedonFGDB()
-        pedonFGDB = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_Characterization_Database_newSchema2.gdb'
+        pedonFGDB = createPedonFGDB()
+        #pedonFGDB = r'N:\flex\Dylan\NCSS_Characterization_Database\Updated_Schema_2019\NCSS_Characterization_Database_newSchema2.gdb'
         arcpy.env.workspace = pedonFGDB
 
         if not pedonFGDB:

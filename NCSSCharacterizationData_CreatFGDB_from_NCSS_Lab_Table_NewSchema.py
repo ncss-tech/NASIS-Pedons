@@ -119,8 +119,8 @@ if __name__ == '__main__':
     try:
 
         schemaTable = r'D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\Metadata_Tables.gdb\NCSS_Lab_Table_Metadata_20191114'
-
-        pedonGDB = r'D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\NCSSLabDatabase_Schema_Template.gdb'
+        #pedonGDB = r'D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\NCSSLabDatabase_Schema_Template.gdb'
+        pedonGDB = r'D:\ESRI_stuff\python_scripts\GitHub\NASIS-Pedons\Junk.gdb'
 
         """ --------------------------------- Collect schema tables and fields -------------------------"""
         tableName = 1
