@@ -61,46 +61,83 @@ def convertTablesToCSV(GDB):
 
     try:
         env.workspace = GDB
+
+        # List containing all tables from input FGDB
         tablesToConvert = [table for table in arcpy.ListTables()]
 
+        # Add feature classes to list above
         for fc in arcpy.ListFeatureClasses():
             tablesToConvert.append(fc)
 
-        if len(tablesToConvert):
+        numOfTablesToConvert = len(tablesToConvert)
 
+        if bPipeDelimitted:
+            ext = ".txt"
+        else:
+            ext = ".csv"
+
+        if numOfTablesToConvert:
+            AddMsgAndPrint("\n")
+
+            # Itereate through tables and feature classes
             for table in tablesToConvert:
 
-                #if not table == 'phtext':continue
+                try:
 
-                numOfRows = int(arcpy.GetCount_management(table).getOutput(0))
-                fieldNames = [f.name for f in arcpy.ListFields(table)]
+                    # record count
+                    numOfRows = int(arcpy.GetCount_management(table).getOutput(0))
+                    fieldNames = [f.name for f in arcpy.ListFields(table)]
 
-                tempTable = table + "Temp.csv"
-                permTable = outputFolder + os.sep + table + ".txt"
+                    finalFile = outputFolder + os.sep + table + ext
 
-                if arcpy.Exists(outputFolder + os.sep + tempTable):
-                    arcpy.Delete_management(outputFolder + os.sep + tempTable)
+                    # Produce CSV files
+                    if not bPipeDelimitted:
+                        arcpy.SetProgressorLabel("Converting " + table + " to CSV file Number of records: " + splitThousands(numOfRows))
+                        arcpy.TableToTable_conversion(table,outputFolder, table + ext)
+                        AddMsgAndPrint("Successfully converted " + table + " to CSV file.  Number of records: " + splitThousands(numOfRows))
 
-                if arcpy.Exists(permTable):
-                    continue
-                    #arcpy.Delete_management(permTable)
+                    # Produce pipe delimitted files, which requires a temp file to be written
+                    else:
+                        tempTable = table + "Temp.csv"
 
-                AddMsgAndPrint("Converting " + table + " to CSV file.  Num of records: " + splitThousands(numOfRows))
-                arcpy.TableToTable_conversion(table,outputFolder,tempTable)
+                        if arcpy.Exists(tempTable):
+                            arcpy.Delete_management(outputFolder + os.sep + tempTable)
 
-                # file needs to be opened in Universal mode otherwise an error is thrown:
-                # new-line character seen in unquoted field - do you need to open the file in universal-newline mode
-                with open(outputFolder + os.sep + tempTable,'rU') as csvFile:
-                    #csvReader = csv.reader(open(csvFile, 'rU'), dialect=csv.excel_tab)
+                        arcpy.SetProgressorLabel("Converting " + table + " to temp CSV file - Number of records: " + splitThousands(numOfRows))
+                        arcpy.TableToTable_conversion(table,outputFolder,tempTable)
 
-                    csvReader = csv.reader(csvFile)
-                    with open(permTable,"wb") as csvResult:
-                        csvWrite = csv.writer(csvResult,delimiter='|',quotechar='"')
+                        # file needs to be opened in Universal mode otherwise an error is thrown:
+                        # new-line character seen in unquoted field - do you need to open the file in
+                        # universal-newline mode
+                        with open(outputFolder + os.sep + tempTable,'rU') as csvFile:
+                            #csvReader = csv.reader(open(csvFile, 'rU'), dialect=csv.excel_tab)
+                            arcpy.SetProgressorLabel("Writing " + table + " records to pipe delimitted text file ")
 
-                        for row in csvReader:
-                            csvWrite.writerow(row[1:])
+                            csvReader = csv.reader(csvFile)
+                            with open(finalFile,"wb") as csvResult:
+                                csvWrite = csv.writer(csvResult,delimiter='|',quotechar='"')
 
-                arcpy.Delete_management(outputFolder + os.sep + tempTable)
+                                try:
+                                    for row in csvReader:
+                                        csvWrite.writerow(row[1:])
+                                        arcpy.SetProgressorPosition()
+                                except:
+                                    AddMsgAndPrint("\tHad to increase csv field size")
+                                    csv.field_size_limit(sys.maxsize)
+                                    for row in csvReader:
+                                        csvWrite.writerow(row[1:])
+                                    arcpy.SetProgressorPosition()
+
+                            AddMsgAndPrint("Successfully converted " + table + " to pipe delimitted text file.  Number of records: " + splitThousands(numOfRows))
+
+                        arcpy.ResetProgressor()
+                        arcpy.Delete_management(outputFolder + os.sep + tempTable)
+
+                except:
+                    AddMsgAndPrint("\nUnable to properly convert " + table,2)
+                    errorMsg()
+
+        AddMsgAndPrint("\n")
 
     except:
         errorMsg()
@@ -117,7 +154,9 @@ if __name__ == '__main__':
 
     inputGDB = arcpy.GetParameter(0)
     outputFolder = arcpy.GetParameterAsText(1)
+    bPipeDelimitted = arcpy.GetParameter(2)
 
+    arcpy.env.overwriteOutput = True
     #inputGDB = r'E:\All_Pedons\NASIS_Pedons\NASIS_Pedons_20180415.gdb'
     #outputFolder = r'E:\All_Pedons\NASIS_Pedons\CSV_files_20180415'
 

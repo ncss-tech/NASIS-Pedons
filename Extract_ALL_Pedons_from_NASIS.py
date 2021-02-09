@@ -956,7 +956,6 @@ def getPedonHorizon(pedonList):
             dictionary was created.  Bizarre'''
 
         URL = r'https://nasis.sc.egov.usda.gov/NasisReportsWebSite/limsreport.aspx?report_name=WEB_AnalysisPC_MAIN_URL_EXPORT&pedonid_list=' + pedonList
-
         requestStartTime = tic()
 
         try:
@@ -1001,7 +1000,7 @@ def getPedonHorizon(pedonList):
         AddMsgAndPrint(tab + "Network Request Time: " + toc(requestStartTime))
 
         invalidTable = 0    # represents tables that don't correspond with the GDB
-        invalidRecord = 0  # represents records that were not added
+        invalidRecord = 0   # represents records that were not added
         validRecord = 0
 
         bHeader = False         # flag indicating if value is html junk
@@ -1117,6 +1116,7 @@ def getPedonHorizon(pedonList):
 
         if not validRecord:
             AddMsgAndPrint("\t\tThere were no valid records captured from NASIS request",2)
+            AddMsgAndPrint(str(URL))
             return False
 
         # Report any invalid tables found in report; This should take care of itself as Jason perfects the report.
