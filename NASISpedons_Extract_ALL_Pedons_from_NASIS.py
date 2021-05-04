@@ -333,7 +333,6 @@ def getListOfAllPedonIDs():
 
         # iterate through the report until a valid record is found
         for theValue in theReport:
-
             theValue = theValue.strip() # removes whitespace characters
 
             # Iterating through the lines in the report
@@ -343,7 +342,10 @@ def getListOfAllPedonIDs():
 
                 # Found a valid record
                 if not theValue == None:
-                    listOfPedonIDs = theValue.split(",")
+
+                    # All of the peodonIDs will be contained in 1 line
+                    pedonDict = {val.strip():None for val in theValue.split(",")}
+
                 else:
                     continue
 
@@ -356,12 +358,12 @@ def getListOfAllPedonIDs():
         #Resets the progressor back to its initial state
         arcpy.ResetProgressor()
 
-        if len(listOfPedonIDs) == 0:
+        if len(pedonDict) == 0:
             AddMsgAndPrint("\tThere were no pedons returned from this report",2)
             return False
 
         else:
-            return listOfPedonIDs
+            return pedonDict
 
     except:
         errorMsg()
@@ -1505,25 +1507,28 @@ if __name__ == '__main__':
         outputFolder = arcpy.GetParameterAsText(1)
         question = arcpy.GetParameterAsText(2)
 
-##        GDBname = 'OnePedon'
-##        outputFolder = r'C:\Temp'
+        GDBname = 'OnePedon'
+        outputFolder = r'C:\Temp'
+        question = 'dylanbeaudette'
 
         if not base64.b64encode(question) == r'ZHlsYW5iZWF1ZGV0dGU=':
             AddMsgAndPrint("\n\nYou do not have permission to execute this tool",2)
             exit()
 
         """ ------------------------------------------------------------------------ Set Scratch Workspace -------------------------------------------------------------------------------------"""
-        scratchWS = setScratchWorkspace()
-        arcpy.env.scratchWorkspace = scratchWS
-
-        if not scratchWS:
-            AddMsgAndPrint("\n Failed to scratch workspace; Try setting it manually",2)
-            exit()
+##        scratchWS = setScratchWorkspace()
+##        arcpy.env.scratchWorkspace = scratchWS
+##
+##        if not scratchWS:
+##            AddMsgAndPrint("\n Failed to scratch workspace; Try setting it manually",2)
+##            exit()
 
         """ -------------------------------------------------- Get a list of PedonIDs that are within the bounding box from NASIS -----------------------------------------------------------------
             ---------------------------------------------------- Uses the 'WEB_EXPORT_PEDON_BOX_COUNT' NASIS report --------------------------------------------------------------------------"""
         # ['10851', '10852', '10853', '10854']
-        pedonidList = getListOfAllPedonIDs()
+        pedonDict = getListOfAllPedonIDs()
+        exit()
+
         ##pedonidList = pedonidList[0:10000]
         ##pedonidList = ['10851', '10852', '10853', '10854']
         ##pedonidList = [(line.rstrip('\n')).split(',') for line in open(inputTextFile)].pop()
