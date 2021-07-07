@@ -718,21 +718,24 @@ def createPedonFGDB():
         return False
 
 ## ===============================================================================================================
-def create3Dictionaries(pedonFGDBloc):
+def createReferenceObjects(pedonFGDBloc):
     # Description
     # This function will create the following 3 unique dictionaries that will be used throughout the script.
-    # - tblAliases:         Contains physical and alias names from MDSTATTABS table.
-    #                       i.e. {croptreedetails:'Crop Tree Details'}
-    #                       This is only used for printing/summarizing purposes by the importPedonData function
-    # - pedonGDBtablesDict: contains every table in the newly created pedonFGDB above as a key.
+    # - pedonGDBtablesList: contains every table in the newly created pedonFGDB above as a key.
     #                       Individual records of tables will be added as list of values to the table keys.
     #                       This dictionary will be populated using the results from the
     #                       the WEB_AnalysisPC_MAIN_URL_EXPORT NASIS report
     #                       i.e. {'area': [],'areatype': [],'basalareatreescounted': []}
-    # - tableFldDict:       contains table:number of fields in order to double check that the values from
+    # - tableInfoDict:      Dictionary containing physical name from MDSTATTABS table as the key.
+    #                       Each key has an associated list consisting of alias name, number of fields in the
+    #                       physical table and the position index of the same table within the pedonGDBList.
+    #                       i.e. {croptreedetails:['Crop Tree Details',48,34]}
+    #                       The number of fields is used to double check that the values from
     #                       the web report are correct.  This was added b/c there were text fields that were
     #                       getting disconnected in the report and being read as 2 lines -- Jason couldn't
-    #                       address this issue in NASIS
+    #                       address this issue in NASIS.
+    #                       The position index is needed b/c once the pedonGDBList begins to be populated a
+    #                       table cannot be looked up.
 
     # Paramaters
     # pedonFGDBloc - Catalog path of the pedon File Geodatabase that was create to store pedon data.
@@ -740,13 +743,8 @@ def create3Dictionaries(pedonFGDBloc):
     #                and physical table names
 
     # Returns
-    # This function returns 3 dictionaries (Description above).  If anything goes wrong the function will
-    # return False,False,False and the script will eventually exit.
-
-    # Future Upgrades
-    # These 3 dictionaries should be consolidated into 1 dictionary but it would require somewhat of rewrite
-    # for multiple functions.  The code would be simpler but not necessarily faster.
-
+    # This function returns 2 dictionaries (Description above).  If anything goes wrong the function will
+    # return False,False and the script will eventually exit.
 
     try:
         arcpy.SetProgressorLabel("Gathering Table and Field Information")
@@ -758,7 +756,7 @@ def create3Dictionaries(pedonFGDBloc):
         # Establishes a cursor for searching through field rows. A search cursor can be used to retrieve rows.
         # This method will return an enumeration object that will, in turn, hand out row objects
         if not arcpy.Exists(theMDTable):
-            return False,False,False
+            return False,False
 
         tableList = arcpy.ListTables("*")
         tableList.append("pedon")
@@ -768,7 +766,7 @@ def create3Dictionaries(pedonFGDBloc):
 
         # Initiate 3 Dictionaries
         tableInfoDict = dict()
-        tblAliasesDict = dict()
+        #tblAliasesDict = dict()
         emptyPedonGDBtablesDict = dict()
 
         with arcpy.da.SearchCursor(theMDTable,nameOfFields) as cursor:
@@ -782,14 +780,6 @@ def create3Dictionaries(pedonFGDBloc):
 
                 if physicalName in tableList:
 
-                    # i.e. {phtexture:'Pedon Horizon Texture',phtexture}; will create a one-to-many dictionary
-                    # As long as the physical name doesn't exist in dict() add physical name
-                    # as Key and alias as Value.
-                    if not tblAliasesDict.has_key(physicalName):
-                        tblAliasesDict[physicalName] = aliasName
-
-                        emptyPedonGDBtablesDict[physicalName] = []
-
                     uniqueFields = arcpy.Describe(os.path.join(pedonFGDBloc,physicalName)).fields
                     numOfValidFlds = 0
 
@@ -801,22 +791,29 @@ def create3Dictionaries(pedonFGDBloc):
                     if physicalName == 'pedon':
                         numOfValidFlds += 2
 
-                    tableInfoDict[physicalName] = numOfValidFlds
+
+                    # i.e. {phtexture:'Pedon Horizon Texture',phtexture}; will create a one-to-many dictionary
+                    # As long as the physical name doesn't exist in dict() add physical name
+                    # as Key and alias as Value.
+                    if not tableInfoDict.has_key(physicalName):
+                        tableInfoDict[physicalName] = [aliasName,numOfValidFlds]
+                        emptyPedonGDBtablesDict[physicalName] = []
+
                     del uniqueFields;numOfValidFlds
 
         del theMDTable,tableList,nameOfFields
-
         arcpy.SetProgressorLabel("")
-        return tblAliasesDict,emptyPedonGDBtablesDict,tableInfoDict
+
+        return emptyPedonGDBtablesDict,tableInfoDict
 
     except arcpy.ExecuteError:
         AddMsgAndPrint(arcpy.GetMessages(2),2)
-        return False, False, False
+        return False, False
 
     except:
         AddMsgAndPrint("Unhandled exception (GetTableAliases)", 2)
         errorMsg()
-        return False, False, False
+        return False, False
 
 ## ===============================================================================================================
 def parsePedonsIntoLists():
@@ -915,10 +912,10 @@ def organizeFutureInstanceIntoPedonDict(futureObject):
 
             theValue = theValue.strip() # remove whitespace characters
 
-            # represents the start of valid table
+            # represents the start of valid table; Typically Line #19
             if theValue.find('@begin') > -1:
                 theTable = theValue[theValue.find('@') + 7:]  ## Isolate the table
-                numOfFields = tableFldDict[theTable]
+                numOfFields = tableFldDict[theTable][1]
 
                 # Check if the table name exists in the list of dictionaries
                 # if so, set the currentTable variable and bHeader
@@ -1023,7 +1020,7 @@ def organizeFutureInstanceIntoPedonDict(futureObject):
         return False
 
 ## ================================================================================================================
-def importPedonData(tblAliases,verbose=False):
+def importPedonData(tableInfoDict,verbose=False):
     """ This function will purge the contents from the pedonGDBtablesDict dictionary which contains all of the pedon
         data into the pedon FGDB.  Depending on the number of pedons in the user's AOI, this function will be
         used multiple times.  The pedonGDBtablesDict dictionary could possilbly allocate all of the computer's
@@ -1035,10 +1032,10 @@ def importPedonData(tblAliases,verbose=False):
         if verbose: AddMsgAndPrint("\nImporting Pedon Data into FGDB")
         arcpy.SetProgressorLabel("Importing Pedon Data into FGDB")
 
-        # use the tblAliases so that tables are imported in alphabetical order
-        tblKeys = tblAliases.keys()
+        # use the tableInfoDict so that tables are imported in alphabetical order
+        tblKeys = tableInfoDict.keys()
         maxCharTable = max([len(table) for table in tblKeys]) + 1
-        maxCharAlias = max([len(value[1]) for value in tblAliases.items()])
+        maxCharAlias = max([len(value[1][0]) for value in tableInfoDict.items()])
 
         firstTab = (maxCharTable - len("Table Physical Name")) * " "
         headerName = "\n\tTable Physical Name" + firstTab + "Table Alias Name"
@@ -1058,8 +1055,7 @@ def importPedonData(tblAliases,verbose=False):
             if table.find('Metadata') > -1: continue
 
             # Capture the alias name of the table
-            ##if bAliasName:
-            aliasName = tblAliases[table]
+            aliasName = tableInfoDict[table][0]
 
             # Strictly for standardizing reporting
             firstTab = (maxCharTable - len(table)) * " "
@@ -1161,8 +1157,8 @@ def importPedonData(tblAliases,verbose=False):
                         break
                     except:
                         AddMsgAndPrint("\n\tError in: " + table + " table")
-                        print "\n\t" + str(rec)
-                        print "\n\tRecord Number: " + str(recNum)
+##                        print "\n\t" + str(rec)
+##                        print "\n\tRecord Number: " + str(recNum)
                         AddMsgAndPrint("\tNumber of Fields in GDB: " + str(len(nameOfFields)))
                         AddMsgAndPrint("\tNumber of fields in report: " + str(len([rec.split('|')][0])))
                         errorMsg()
@@ -1310,11 +1306,12 @@ def openURL(url):
             i+=1  # request number
 
         response = urlopen(url)
+        arcpy.SetProgressorLabel("")
 
         if response.code == 200:
             return response.readlines()
-
         else:
+            AddMsgAndPrint("\nFailed to open URL: " + str(url),2)
             return None
 
     except URLError, e:
@@ -1397,10 +1394,10 @@ if __name__ == '__main__':
             outputFolder = arcpy.GetParameterAsText(1)
             allPedons = arcpy.GetParameter(2)
 
-##        inputFeatures = r'E:\Pedons\Temp\soilsa_a_wi025.shp'
-##        GDBname = 'NASIS_Pedons'
+##        inputFeatures = r'E:\Pedons\Temp\smallArea.shp'
+##        GDBname = 'small'
 ##        outputFolder = r'E:\Pedons\Temp'
-##        allPedons = True
+##        allPedons = False
 
         startTime = tic()
 
@@ -1466,10 +1463,10 @@ if __name__ == '__main__':
             AddMsgAndPrint("\nFailed to Initiate Empty Pedon File Geodatabase.  Error in createPedonFGDB() function. Exiting!",2)
             exit()
 
-        # Create 3 Dictionaries that will be used throughout this script
-        tblAliases,pedonGDBtablesDict,tableFldDict = create3Dictionaries(pedonFGDB)
+        # Create 2 Dictionaries that will be used throughout this script
+        pedonGDBtablesDict,tableFldDict = createReferenceObjects(pedonFGDB)
 
-        if not tblAliases:
+        if not tableFldDict:
             AddMsgAndPrint("\nCould not retrieve alias names from \'MetadataTable\'",1)
             exit()
 
@@ -1510,14 +1507,16 @@ if __name__ == '__main__':
 
             # yield future objects as they are done.
             for future in as_completed(future_to_url):
-                data = future.result()
-                futureResults.append(data)
+                #futureResults.append(future.result())
+                organizeFutureInstanceIntoPedonDict(future.result())
                 arcpy.SetProgressorPosition()
+
         arcpy.ResetProgressor()
 
-        with ProcessPoolExecutor() as executor:
-            for result in futureResults:
-                organizeFutureInstanceIntoPedonDict(result)
+##        with ProcessPoolExecutor() as executor:
+##            for result in futureResults:
+##                organizeFutureInstanceIntoPedonDict(result)
+
 
 # The next 10 lines were used to test the ProcessPoolExecutor with arcpy.da.editor
 # The test was successful but it was way too slow.
@@ -1534,7 +1533,7 @@ if __name__ == '__main__':
 
         # Import Pedon Information into Pedon FGDB
         if len(pedonGDBtablesDict['pedon']):
-            if not importPedonData(tblAliases,verbose=(True if i==numOfPedonStrings else False)):
+            if not importPedonData(tableFldDict,verbose=(True if i==numOfPedonStrings else False)):
                 exit()
 
         """ ------------------------------------ Report Summary of results -----------------------------------"""
@@ -1583,7 +1582,6 @@ if __name__ == '__main__':
         AddMsgAndPrint("Dictionary Size: " + str(getObjectSize(pedonGDBtablesDict)))
 
     except:
-        objSize = getObjectSize(pedonGDBtablesDict)
         FinishTime = toc(startTime)
         AddMsgAndPrint("Total Time = " + str(FinishTime))
         AddMsgAndPrint("Size of pedonGDBtablesDict  = " + str(objSize) )
